@@ -1,45 +1,60 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { Platform } from 'react-native';
-
-import { HapticTab } from '@/components/HapticTab';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { HapticTab } from "@/components/HapticTab";
+import Header from "@/components/ui/Header";
+import TabBarBackground from "@/components/ui/TabBarBackground";
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
+import { Platform, useColorScheme } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Colors } from "react-native/Libraries/NewAppScreen";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const tintColor = Colors[colorScheme ?? "light"].tint;
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+    <SafeAreaProvider>
+      <Tabs
+        screenOptions={{
+          header: () => <Header />,
+          tabBarActiveTintColor: tintColor,
+          tabBarButton: HapticTab,
+          tabBarBackground: TabBarBackground,
+          tabBarStyle: Platform.select({
+            ios: {
+              position: "absolute",
+            },
+            default: {},
+          }),
         }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="Admin/admin-login"
+          options={{
+            title: "Admin Login",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="shield-checkmark" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="Warden/warden-login"
+          options={{
+            title: "Warden Login",
+            tabBarIcon: ({ color, size }) => (
+              <FontAwesome5 name="id-badge" size={size} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="Student/student-login"
+          options={{
+            title: "Student Login",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="school" size={size} color={color} />
+            ),
+          }}
+        />
+      </Tabs>
+    </SafeAreaProvider>
   );
 }
