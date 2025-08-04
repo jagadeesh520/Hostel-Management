@@ -6,14 +6,11 @@ import {
   ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import * as Location from "expo-location";
 import { Stack } from "expo-router";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
-import { Alert } from "react-native";
 import "react-native-reanimated";
-import "../scripts/backgroundLocation";
+//import "../scripts/backgroundLocation";
 
 // Required to persist Clerk session securely
 const tokenCache = {
@@ -33,7 +30,7 @@ const tokenCache = {
   },
 };
 
-const LOCATION_TASK_NAME = "background-location-task";
+//const LOCATION_TASK_NAME = "background-location-task";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -41,7 +38,7 @@ export default function RootLayout() {
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
   });
 
-  useEffect(() => {
+ /*  useEffect(() => {
     const startLocationUpdates = async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
@@ -65,7 +62,7 @@ export default function RootLayout() {
     };
 
     startLocationUpdates();
-  }, []);
+  }, []); */
 
   if (!loaded) {
     return null;

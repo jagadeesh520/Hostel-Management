@@ -34,9 +34,18 @@ export default function AdminLogin() {
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data?.message || "Login failed");
+        if (data?.message?.toLowerCase().includes("not found")) {
+          Alert.alert("User Not Found", "No account found with that email.");
+        } else if (data?.message?.toLowerCase().includes("invalid")) {
+          Alert.alert(
+            "Wrong Password",
+            "Please check your password and try again."
+          );
+        } else {
+          Alert.alert("Login Failed", data?.message || "Wrong credentials");
+        }
+        return;
       }
 
       await AsyncStorage.setItem("wardenToken", data.token);
@@ -46,7 +55,7 @@ export default function AdminLogin() {
       router.replace("/dashboards/WardenDashboard/Warden");
     } catch (error) {
       console.error("Login error:", error);
-      Alert.alert("Login Failed" );
+      Alert.alert("Login Failed");
     }
   };
 
