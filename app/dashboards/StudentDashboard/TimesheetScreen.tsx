@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import {
+  Linking,
   Modal,
   Pressable,
   StyleSheet,
@@ -31,10 +32,29 @@ const TimesheetScreen = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [canPay, setCanPay] = useState(false); // NEW
+  const [unpaidMonths, setUnpaidMonths] = useState<
+    { month: number; year: number }[]
+  >([]);
 
   useEffect(() => {
     fetchTimesheetAndRates(selectedMonth, selectedYear);
   }, [selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    fetchUnpaidMonths();
+  }, []);
+
+  const fetchUnpaidMonths = async () => {
+    try {
+      const rollNo = await AsyncStorage.getItem("rollNo");
+      const res = await axios.get(
+        `http://192.168.29.83:5000/api/timesheetRoutes/unpaid?rollNo=${rollNo}`
+      );
+      setUnpaidMonths(res.data.unpaidMonths); // Expected: [{ month: 7, year: 2025 }, ...]
+    } catch (err) {
+      console.error("Failed to fetch unpaid months", err);
+    }
+  };
 
   const fetchTimesheetAndRates = async (month: number, year: number) => {
     try {
@@ -69,7 +89,9 @@ const TimesheetScreen = () => {
 
       const marked: Record<string, MarkedDateProps> = {};
       for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(
+          d
+        ).padStart(2, "0")}`;
         if (filteredPresent.includes(dateStr)) {
           marked[dateStr] = {
             customStyles: {
@@ -106,7 +128,8 @@ const TimesheetScreen = () => {
         const rateRes = await axios.get(
           `http://192.168.29.83:5000/api/adminRates/rate?month=${month}&year=${year}`
         );
-        perDayRate = gender === "male" ? rateRes.data.boysRate : rateRes.data.girlsRate;
+        perDayRate =
+          gender === "male" ? rateRes.data.boysRate : rateRes.data.girlsRate;
       } catch (rateErr: any) {
         if (rateErr.response?.status === 404) {
           console.warn("Rate not set for selected month/year.");
@@ -129,16 +152,156 @@ const TimesheetScreen = () => {
       const now = new Date();
       const nextMonthStart = new Date(year, month, 1); // 1st day of next month (month is 1-based)
       setCanPay(now >= nextMonthStart);
-
     } catch (err) {
       console.error("Failed to fetch timesheet or rate:", err);
       setAmountDetails({ presentDays: 0, dailyRate: 0, total: 0 });
     }
   };
+  const handleUPIPayment = async () => {
+  try {
+    const rollNo = await AsyncStorage.getItem("rollNo");
+    if (!rollNo) return;
+
+    // Check unpaid months to prevent double payment
+    const isUnpaid = unpaidMonths.find(
+      (m) => m.month === selectedMonth && m.year === selectedYear
+    );
+    if (!isUnpaid) {
+      alert("You have already paid for this month.");
+      return;
+    }
+
+    // Step 1: Get Admin UPI ID
+    const upiRes = await axios.get(
+      "http://192.168.29.83:5000/api/timesheetRoutes/admin-upi"
+    );
+    const { upiId, name } = upiRes.data;
+
+    if (!upiId || !name) {
+      alert("UPI details not available. Please contact admin.");
+      return;
+    }
+
+    const amount = amountDetails.total;
+    const txnNote = `Hostel fees for ${selectedMonth}-${selectedYear}`;
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(
+      name
+    )}&tn=${encodeURIComponent(txnNote)}&am=${amount}&cu=INR`;
+
+    console.log("Generated UPI URL:", upiUrl);
+
+    const supported = await Linking.canOpenURL(upiUrl);
+    if (!supported) {
+      alert("No UPI-compatible app found on your device.");
+      return;
+    }
+
+    // Step 2: Open UPI App
+    await Linking.openURL(upiUrl);
+
+    // Step 3: Immediately Log into DB (Assuming payment was done)
+    const res = await axios.post(
+      "http://192.168.29.83:5000/api/timesheetRoutes/payments",
+      {
+        rollNo,
+        month: selectedMonth,
+        year: selectedYear,
+        amount: amountDetails.total,
+        days: amountDetails.presentDays,
+        paymentMethod: "UPI", // Optional extra field
+      }
+    );
+
+    if (res.data.success) {
+      alert("Payment recorded successfully!");
+    } else {
+      alert("Payment failed to record.");
+    }
+
+    setModalVisible(false);
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      console.error("UPI Payment error:", {
+        message: err.message,
+        status: err.response?.status,
+        data: err.response?.data,
+        url: err.config?.url,
+        method: err.config?.method,
+        payload: err.config?.data,
+      });
+    } else {
+      console.error("Unexpected error:", err);
+    }
+
+    alert("Payment failed. Try again.");
+    setModalVisible(false);
+  }
+};
+
+
+ /*  
+    try {
+      const rollNo = await AsyncStorage.getItem("rollNo");
+
+
+      if (!rollNo) return;
+
+      const res = await axios.post(
+        "http://192.168.29.83:5000/api/timesheetRoutes/payments",
+        {
+          rollNo,
+          month: selectedMonth,
+          year: selectedYear,
+          amount: amountDetails.total,
+          days: amountDetails.presentDays,
+        }
+      );
+
+      if (res.data.success) {
+        alert("Payment successful!");
+      } else {
+        alert("Payment failed.");
+      }
+
+      setModalVisible(false);
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        console.error("Payment error:", {
+          message: err.message,
+          status: err.response?.status,
+          data: err.response?.data,
+          url: err.config?.url,
+          method: err.config?.method,
+          payload: err.config?.data,
+        });
+      } else {
+        console.error("Unexpected error:", err);
+      }
+
+      alert("Payment failed. Try again.");
+      setModalVisible(false);
+    }
+  }; */
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Timesheet Calendar</Text>
+      {/*  <View style={{ marginVertical: 10 }}>
+        <Text style={{ fontWeight: "bold", fontSize: 14 }}>Unpaid Months:</Text>
+        {!unpaidMonths || unpaidMonths.length === 0 ? (
+          <Text style={{ color: "green" }}>All paid</Text>
+        ) : (
+          unpaidMonths.map((m, idx) => (
+            <Text key={idx} style={{ color: "red" }}>
+              {new Date(m.year, m.month - 1).toLocaleString("default", {
+                month: "long",
+                year: "numeric",
+              })}
+            </Text>
+          ))
+        )}
+      </View> */}
+
       <Calendar
         markingType="custom"
         markedDates={markedDates}
@@ -198,12 +361,16 @@ const TimesheetScreen = () => {
             <Text>Proceed to Payment?</Text>
 
             <View style={styles.modalButtons}>
+              {/* <Pressable onPress={handlePayment} style={styles.modalPayButton}>
+                <Text style={{ color: "#fff" }}>Pay</Text>
+              </Pressable> */}
               <Pressable
-                onPress={() => setModalVisible(false)}
+                onPress={handleUPIPayment}
                 style={styles.modalPayButton}
               >
-                <Text style={{ color: "#fff" }}>Pay</Text>
+                <Text style={{ color: "#fff" }}>Pay via UPI</Text>
               </Pressable>
+
               <Pressable
                 onPress={() => setModalVisible(false)}
                 style={styles.modalCancelButton}
