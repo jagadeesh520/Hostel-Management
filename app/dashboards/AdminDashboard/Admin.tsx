@@ -45,19 +45,19 @@ export default function AdminDashboard() {
     {
       label: "Reports",
       icon: "📊",
-      color: "#BA55D3",
+      color: "#BA55D3", // Purple
       route: "/dashboards/AdminDashboard/reports",
     },
     {
       label: "Daily Rates",
       icon: <FontAwesome5 name="rupee-sign" size={24} color="white" />,
-      color: "#BA55D3",
+      color: "#20B2AA", // LightSeaGreen
       route: "/dashboards/AdminDashboard/addDailyRates",
     },
     {
       label: "Location",
       icon: <FontAwesome5 name="map-marked-alt" size={24} color="white" />,
-      color: "#BA55D3",
+      color: "#FFA500", // Orange
       route: "/dashboards/AdminDashboard/campusLocationForm",
     },
     {
