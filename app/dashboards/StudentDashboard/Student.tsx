@@ -1,4 +1,4 @@
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -82,7 +82,9 @@ export default function StudentDashboard() {
           <View style={styles.profileHeader}>
             {student.faceImage && !imageError ? (
               <Image
-                source={{ uri: `http://192.168.29.83:5000${student.faceImage}` }}
+                source={{
+                  uri: `http://192.168.29.83:5000${student.faceImage}`,
+                }}
                 style={styles.faceImage}
                 onError={() => setImageError(true)}
               />
@@ -95,7 +97,9 @@ export default function StudentDashboard() {
             )}
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>{student.studentName}</Text>
-              <Text style={styles.profileSubText}>Roll No: {student.rollNo}</Text>
+              <Text style={styles.profileSubText}>
+                Roll No: {student.rollNo}
+              </Text>
             </View>
           </View>
 
@@ -128,6 +132,32 @@ export default function StudentDashboard() {
             >
               <Ionicons name="chatbox-ellipses" size={24} color="white" />
               <Text style={styles.cardLabel}>Raise a Ticket</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.cardBox, { backgroundColor: "#4CAF50" }]}
+              onPress={async () => {
+                if (!student) {
+                  Alert.alert("Error", "Student data not loaded yet.");
+                  return;
+                }
+
+                // Save student info temporarily to AsyncStorage
+                await AsyncStorage.setItem(
+                  "currentStudent",
+                  JSON.stringify(student)
+                );
+
+                router.push("/dashboards/StudentDashboard/AttendanceScanner");
+              }}
+            >
+              <Ionicons
+                name="camera"
+                size={24}
+                color="white"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.cardLabel}>Self Check-In</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

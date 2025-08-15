@@ -2,9 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import React, { useState } from "react";
 import {
+  FlatList,
   Linking,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -48,138 +48,138 @@ export default function StudentUploadScreen() {
     }
   };
 
- const handleUploadToServer = async () => {
-  try {
-    const token = await AsyncStorage.getItem("adminToken");
+  const handleUploadToServer = async () => {
+    try {
+      const token = await AsyncStorage.getItem("adminToken");
 
-    if (!token) {
-      alert("Not authenticated. Please log in.");
-      return;
+      if (!token) {
+        alert("Not authenticated. Please log in.");
+        return;
+      }
+
+      const response = await fetch(
+        "http://192.168.29.83:5000/api/students/upload",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ students }),
+        }
+      );
+
+      const data = await response.json();
+      console.log("data", data);
+
+      if (response.ok) {
+        alert("✅ Upload successful!");
+        setStudents([]);
+      } else {
+        alert(`❌ Upload failed: ${data.message || "Unknown error"}`);
+      }
+    } catch (err) {
+      console.error("Upload Error:", err);
+      alert("🚫 Upload failed. Please try again.");
     }
+  };
 
-    const response = await fetch("http://192.168.29.83:5000/api/students/upload", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ students }),
-    });
+  const renderStudentItem = ({ item }: { item: any }) => (
+    <View style={styles.studentItem}>
+      <Text style={styles.studentText}>
+        {item["Student Name"]} | {item["College Name"]} | {item["Gender"]} |{" "}
+        {item["Roll No"]} | {item["Year"]} | {item["Room No"]} |{" "}
+        {item["Block Name"]} | {item["Address"] || "-"} |{" "}
+        {item["Student Phone"] || "-"} | {item["Parent Phone"] || "-"}
+      </Text>
+    </View>
+  );
 
-    const data = await response.json();
-    console.log("data",data)
+  const listHeader = () => (
+    <>
+      <Text style={styles.infoTitle}>📄 Excel File Format Required:</Text>
+      <View style={{ marginBottom: 12 }}>
+        <FlatList
+          horizontal
+          data={[
+            "College Name",
+            "Student Name",
+            "Gender",
+            "Roll No",
+            "Year",
+            "Room No",
+            "Block Name",
+            "Address",
+            "Student Phone",
+            "Parent Phone",
+          ]}
+          keyExtractor={(item) => item}
+          renderItem={({ item }) => (
+            <View style={styles.table}>
+              <Text style={styles.tableHeader}>{item}</Text>
+              <Text style={styles.tableCell}>Example 1</Text>
+              <Text style={styles.tableCell}>Example 2</Text>
+            </View>
+          )}
+          showsHorizontalScrollIndicator={false}
+        />
+      </View>
 
-    if (response.ok) {
-      alert("✅ Upload successful!");
-      setStudents([]);
-    } else {
-      alert(`❌ Upload failed: ${data.message || "Unknown error"}`);
-    }
-  } catch (err) {
-    console.error("Upload Error:", err);
-    alert("🚫 Upload failed. Please try again.");
-  }
-};
+      <TouchableOpacity
+        style={styles.sampleButton}
+        onPress={() =>
+          Linking.openURL(
+            "https://yourdomain.com/sample-student-upload.xlsx"
+          )
+        }
+      >
+        <Text style={styles.sampleText}>⬇ Download Sample Template</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.button} onPress={handlePickFile}>
+        <Text style={styles.buttonText}>📁 Select Excel File</Text>
+      </TouchableOpacity>
+
+      {students.length > 0 && <Text style={styles.previewTitle}>👀 Preview Data:</Text>}
+    </>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.infoTitle}>📄 Excel File Format Required:</Text>
-        <ScrollView horizontal style={styles.tableWrapper}>
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>College Name</Text>
-            <Text style={styles.tableCell}>ABC Engineering College</Text>
-            <Text style={styles.tableCell}>XYZ Institute of Tech</Text>
-          </View>
+      <FlatList
+        data={students}
+        keyExtractor={(item, index) => item["Roll No"] || index.toString()}
+        renderItem={renderStudentItem}
+        ListHeaderComponent={listHeader}
+        initialNumToRender={20}
+        maxToRenderPerBatch={20}
+        windowSize={21}
+        contentContainerStyle={{ paddingBottom: 80 }}
+      />
 
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>Student Name</Text>
-            <Text style={styles.tableCell}>John Doe</Text>
-            <Text style={styles.tableCell}>Jane Smith</Text>
-          </View>
-
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>Gender</Text>
-            <Text style={styles.tableCell}>Male</Text>
-            <Text style={styles.tableCell}>Female</Text>
-          </View>
-
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>Roll No</Text>
-            <Text style={styles.tableCell}>12345</Text>
-            <Text style={styles.tableCell}>67890</Text>
-          </View>
-
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>Year</Text>
-            <Text style={styles.tableCell}>1</Text>
-            <Text style={styles.tableCell}>2</Text>
-          </View>
-
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>Room No</Text>
-            <Text style={styles.tableCell}>A101</Text>
-            <Text style={styles.tableCell}>B203</Text>
-          </View>
-
-          <View style={styles.table}>
-            <Text style={styles.tableHeader}>Block Name</Text>
-            <Text style={styles.tableCell}>Alpha Block</Text>
-            <Text style={styles.tableCell}>Beta Block</Text>
-          </View>
-        </ScrollView>
-
-        <TouchableOpacity
-          style={styles.sampleButton}
-          onPress={() =>
-            Linking.openURL("https://yourdomain.com/sample-student-upload.xlsx")
-          }
-        >
-          <Text style={styles.sampleText}>⬇ Download Sample Template</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.button} onPress={handlePickFile}>
-          <Text style={styles.buttonText}>📁 Select Excel File</Text>
-        </TouchableOpacity>
-
-        {students.length > 0 && (
-          <>
-            <Text style={styles.previewTitle}>👀 Preview Data:</Text>
-            {students.map((student, index) => (
-              <View key={index} style={styles.studentItem}>
-                <Text style={styles.studentText}>
-                  {student["Student Name"]} | {student["College Name"]} |{" "}
-                  {student["Gender"]} | {student["Roll No"]} | {student["Year"]}{" "}
-                  | {student["Room No"]} | {student["Block Name"]}
-                </Text>
-              </View>
-            ))}
-            <TouchableOpacity
-              style={styles.uploadButton}
-              onPress={handleUploadToServer}
-            >
-              <Text style={styles.uploadText}>🚀 Upload to Server</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </ScrollView>
+      {students.length > 0 && (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={handleUploadToServer}
+          >
+            <Text style={styles.uploadText}>🚀 Upload to Server</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    backgroundColor: "#ffffff", // solid white
     padding: 16,
+    backgroundColor: "#ffffff",
   },
   infoTitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
-  },
-  tableWrapper: {
-    marginBottom: 20,
   },
   table: {
     marginRight: 16,
@@ -238,13 +238,21 @@ const styles = StyleSheet.create({
   studentText: {
     fontSize: 14,
   },
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    paddingBottom: 40,
+    width: "100%",
+    padding: 10,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderColor: "#ddd",
+  },
   uploadButton: {
     backgroundColor: "#ffc107",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 15,
-    marginBottom: 20,
   },
   uploadText: {
     fontWeight: "bold",

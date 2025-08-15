@@ -24,7 +24,7 @@ allprojects {
   repositories {
     maven {
       // @generated begin react-native-background-geolocation-maven - expo prebuild (DO NOT MODIFY) sync-4b2bae87fd8579c445d8885f6bdc8542d9d0bbca
-      maven { url "${project(":react-native-background-geolocation").projectDir}/libs" }
+      //maven { url "${project(":react-native-background-geolocation").projectDir}/libs" }
       maven { url 'https://developer.huawei.com/repo/' }
       // @generated end react-native-background-geolocation-maven
 

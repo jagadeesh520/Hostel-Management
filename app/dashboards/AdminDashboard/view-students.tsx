@@ -22,6 +22,8 @@ type Student = {
   roomNo: string;
   year: string;
   blockName: string;
+  studentPhone?: string;
+  parentPhone?: string;
   isCompleted?: boolean;
 };
 
@@ -85,8 +87,6 @@ export default function ViewStudents() {
       });
 
       setCapturedImages((prev) => [...prev, photoData.uri]);
-
-      // Re-render to prevent black screen
       setShowCamera(false);
       setTimeout(() => setShowCamera(true), 50);
     } else {
@@ -96,8 +96,7 @@ export default function ViewStudents() {
 
   const updateStudent = async () => {
     if (!selectedStudent) return;
-
-    setIsSaving(true); // Start loading spinner
+    setIsSaving(true);
     const token = await AsyncStorage.getItem("adminToken");
 
     const formData = new FormData();
@@ -105,6 +104,8 @@ export default function ViewStudents() {
     formData.append("rollNo", selectedStudent.rollNo);
     formData.append("roomNo", selectedStudent.roomNo);
     formData.append("year", selectedStudent.year);
+    formData.append("studentPhone", selectedStudent.studentPhone || "");
+    formData.append("parentPhone", selectedStudent.parentPhone || "");
     formData.append("isCompleted", "true");
 
     capturedImages.forEach((imageUri, index) => {
@@ -144,34 +145,20 @@ export default function ViewStudents() {
     } catch (err) {
       alert("Something went wrong while saving.");
     } finally {
-      setIsSaving(false); // Stop loading spinner
+      setIsSaving(false);
     }
   };
 
-  const CameraComponent = () => {
-    return (
-      <View style={styles.cameraContainer}>
-        {showCamera && (
-          <CameraView ref={cameraRef} style={styles.camera} facing={type} />
-        )}
-
-        <View style={styles.cameraButtonsContainer}>
-          <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-            <Text style={styles.buttonText}>📸 Capture</Text>
-          </TouchableOpacity>
-          {/* 
-          <TouchableOpacity
-            style={[styles.captureButton, { backgroundColor: "#007bff" }]}
-            onPress={() =>
-              setType((prev) => (prev === "front" ? "back" : "front"))
-            }
-          >
-            <Text style={styles.buttonText}>🔄 Flip</Text>
-          </TouchableOpacity> */}
-        </View>
+  const CameraComponent = () => (
+    <View style={styles.cameraContainer}>
+      {showCamera && <CameraView ref={cameraRef} style={styles.camera} facing={type} />}
+      <View style={styles.cameraButtonsContainer}>
+        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+          <Text style={styles.buttonText}>📸 Capture</Text>
+        </TouchableOpacity>
       </View>
-    );
-  };
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -215,19 +202,15 @@ export default function ViewStudents() {
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.card}
-            onPress={() => {
-              setSelectedStudent(item);
-              //setCapturedImage(null);
-            }}
+            onPress={() => setSelectedStudent(item)}
           >
             <View style={styles.cardContent}>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
                   <Text style={styles.name}>{item.studentName}</Text>
-                  {item.isCompleted && (
-                    <Text style={{ color: "green", marginLeft: 6 }}>✅</Text>
-                  )}
+                  {item.isCompleted && <Text style={{ color: "green", marginLeft: 6 }}>✅</Text>}
                 </View>
+
                 <View style={styles.row}>
                   <Text style={styles.label}>Roll No:</Text>
                   <Text style={styles.value}>{item.rollNo}</Text>
@@ -244,16 +227,15 @@ export default function ViewStudents() {
                   <Text style={styles.label}>Year:</Text>
                   <Text style={styles.value}>{item.year}</Text>
                 </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Student Phone:</Text>
+                  <Text style={styles.value}>{item.studentPhone || "-"}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>Parent Phone:</Text>
+                  <Text style={styles.value}>{item.parentPhone || "-"}</Text>
+                </View>
               </View>
-             {/*  {item.faceImages?.[0] && (
-                <Image
-                  source={{
-                    uri: `http://192.168.29.83:5000${item.faceImages[0]}`,
-                  }}
-                  style={styles.profileImage}
-                  resizeMode="cover"
-                />
-              )} */}
             </View>
           </TouchableOpacity>
         )}
@@ -273,36 +255,22 @@ export default function ViewStudents() {
                   <Text style={styles.inputLabel}>
                     Captured Images ({capturedImages.length}/5)
                   </Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={{ marginVertical: 10 }}
-                  >
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
                     {capturedImages.map((img, index) => (
                       <TouchableOpacity
                         key={index}
                         onLongPress={() =>
-                          setCapturedImages((prev) =>
-                            prev.filter((_, i) => i !== index)
-                          )
+                          setCapturedImages((prev) => prev.filter((_, i) => i !== index))
                         }
                       >
                         <Image
                           source={{ uri: img }}
-                          style={{
-                            width: 100,
-                            height: 100,
-                            borderRadius: 10,
-                            marginRight: 8,
-                          }}
+                          style={{ width: 100, height: 100, borderRadius: 10, marginRight: 8 }}
                         />
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
-
-                  <Text
-                    style={{ fontSize: 12, color: "#999", textAlign: "center" }}
-                  >
+                  <Text style={{ fontSize: 12, color: "#999", textAlign: "center" }}>
                     Long press an image to remove it.
                   </Text>
                 </>
@@ -313,9 +281,7 @@ export default function ViewStudents() {
                 style={styles.modalInput}
                 value={selectedStudent?.studentName}
                 onChangeText={(text) =>
-                  setSelectedStudent(
-                    (prev) => prev && { ...prev, studentName: text }
-                  )
+                  setSelectedStudent((prev) => prev && { ...prev, studentName: text })
                 }
               />
 
@@ -324,9 +290,7 @@ export default function ViewStudents() {
                 style={styles.modalInput}
                 value={selectedStudent?.rollNo}
                 onChangeText={(text) =>
-                  setSelectedStudent(
-                    (prev) => prev && { ...prev, rollNo: text }
-                  )
+                  setSelectedStudent((prev) => prev && { ...prev, rollNo: text })
                 }
               />
 
@@ -335,9 +299,7 @@ export default function ViewStudents() {
                 style={styles.modalInput}
                 value={selectedStudent?.roomNo}
                 onChangeText={(text) =>
-                  setSelectedStudent(
-                    (prev) => prev && { ...prev, roomNo: text }
-                  )
+                  setSelectedStudent((prev) => prev && { ...prev, roomNo: text })
                 }
               />
 
@@ -356,6 +318,24 @@ export default function ViewStudents() {
                 <Picker.Item label="4th Year" value="4th Year" />
               </Picker>
 
+              <Text style={styles.inputLabel}>Student Phone</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={selectedStudent?.studentPhone}
+                onChangeText={(text) =>
+                  setSelectedStudent(prev => prev && { ...prev, studentPhone: text })
+                }
+              />
+
+              <Text style={styles.inputLabel}>Parent Phone</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={selectedStudent?.parentPhone}
+                onChangeText={(text) =>
+                  setSelectedStudent(prev => prev && { ...prev, parentPhone: text })
+                }
+              />
+
               <View style={styles.buttonRow}>
                 <TouchableOpacity
                   style={[styles.saveButton, { flex: 1, marginRight: 5 }]}
@@ -369,10 +349,7 @@ export default function ViewStudents() {
 
                 <TouchableOpacity
                   style={[styles.cancelButton, { flex: 1, marginLeft: 5 }]}
-                  onPress={() => {
-                    setSelectedStudent(null);
-                    //setCapturedImage(null);
-                  }}
+                  onPress={() => setSelectedStudent(null)}
                 >
                   <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
@@ -398,110 +375,27 @@ const styles = StyleSheet.create({
   },
   filterRow: { flexDirection: "row", marginBottom: 10 },
   picker: { flex: 1, marginHorizontal: 5, backgroundColor: "#fff" },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalBox: {
-    backgroundColor: "#fff",
-    margin: 20,
-    padding: 20,
-    borderRadius: 10,
-    elevation: 10,
-    maxHeight: "90%",
-  },
+  modalContainer: { flex: 1, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalBox: { backgroundColor: "#fff", margin: 20, padding: 20, borderRadius: 10, elevation: 10, maxHeight: "90%" },
   modalTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  modalInput: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 8,
-    marginBottom: 10,
-    borderRadius: 6,
-  },
+  modalInput: { borderWidth: 1, borderColor: "#ccc", padding: 8, marginBottom: 10, borderRadius: 6 },
   modalPicker: { marginBottom: 10 },
-  modalImage: {
-    width: 200,
-    height: 200,
-    alignSelf: "center",
-    borderRadius: 10,
-    marginVertical: 10,
-  },
-  saveButton: {
-    backgroundColor: "#28a745",
-    padding: 10,
-    borderRadius: 6,
-    marginTop: 10,
-  },
+  saveButton: { backgroundColor: "#28a745", padding: 10, borderRadius: 6, marginTop: 10 },
   saveButtonText: { color: "#fff", textAlign: "center" },
-  cancelButton: { padding: 10 },
+  cancelButton: { padding: 10, borderRadius: 6, marginTop: 10, borderWidth: 1, borderColor: "#ccc" },
   cancelText: { color: "#888", textAlign: "center" },
-  card: {
-    backgroundColor: "#fff",
-    padding: 16,
-    marginVertical: 8,
-    borderRadius: 10,
-    elevation: 6,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 8,
-    color: "#333",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 2,
-  },
-  label: { fontWeight: "600", color: "#555", width: 80 },
+  card: { backgroundColor: "#fff", padding: 16, marginVertical: 8, borderRadius: 10, elevation: 6 },
+  name: { fontSize: 18, fontWeight: "bold", marginBottom: 8, color: "#333" },
+  row: { flexDirection: "row", alignItems: "center", marginVertical: 2 },
+  label: { fontWeight: "600", color: "#555", width: 100 },
   value: { color: "#333" },
-  cardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginLeft: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 5,
-    color: "#333",
-  },
-  cameraContainer: {
-    height: 300,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: "#000",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  camera: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
-  },
-  cameraButtonsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 10,
-  },
-  captureButton: {
-    padding: 10,
-    backgroundColor: "#28a745",
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
+  cardContent: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  profileImage: { width: 80, height: 80, borderRadius: 40, marginLeft: 10, borderWidth: 1, borderColor: "#ccc" },
+  inputLabel: { fontSize: 14, fontWeight: "bold", marginTop: 10, marginBottom: 5, color: "#333" },
+  cameraContainer: { height: 300, borderRadius: 10, overflow: "hidden", backgroundColor: "#000", justifyContent: "center", alignItems: "center" },
+  camera: { flex: 1, width: "100%", height: "100%" },
+  cameraButtonsContainer: { flexDirection: "row", justifyContent: "space-around", marginTop: 10 },
+  captureButton: { padding: 10, backgroundColor: "#28a745", borderRadius: 8 },
+  buttonText: { color: "#fff", fontWeight: "bold" },
   buttonRow: { flexDirection: "row", marginTop: 10 },
 });

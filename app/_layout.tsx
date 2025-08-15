@@ -137,6 +137,10 @@ export default function RootLayout() {
               name: "dashboards/StudentDashboard/MyProfile",
               title: "My Profile",
             },
+            {
+              name: "dashboards/StudentDashboard/AttendanceScanner",
+              title: "Self Check-In",
+            },
           ].map((screen) => (
             <Stack.Screen
               key={screen.name}
