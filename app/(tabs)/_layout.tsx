@@ -54,6 +54,12 @@ export default function TabLayout() {
             ),
           }}
         />
+        <Tabs.Screen
+          name="index"
+          options={{
+            href: null, // 👈 hides it from showing as a tab
+          }}
+        />
       </Tabs>
     </SafeAreaProvider>
   );

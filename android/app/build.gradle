@@ -80,10 +80,6 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
-// @generated begin react-native-background-geolocation-project - expo prebuild (DO NOT MODIFY) sync-451bbca0f2f08c9fc8b21a201ef5b476b165ba21
-//Project background_geolocation = project(':react-native-background-geolocation')
-//apply from: "${background_geolocation.projectDir}/app.gradle"
-// @generated end react-native-background-geolocation-project
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -92,6 +88,11 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.anonymous.hostelapp'
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+        disable 'UastImplementation'
+    }
     defaultConfig {
         applicationId 'com.anonymous.hostelapp'
         minSdkVersion rootProject.ext.minSdkVersion

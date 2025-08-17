@@ -1,49 +1,52 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-  repositories {
-    google()
-    mavenCentral()
-  }
-  dependencies {
-    classpath('com.android.tools.build:gradle')
-    classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
-  }
+    repositories {
+        google() // Must include for ML Kit
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' } // Required for some RN plugins
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.8.2") // Updated Gradle plugin
+        classpath("com.facebook.react:react-native-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0")
+    }
 }
 
+// Optional: reference to RN Android dir
 def reactNativeAndroidDir = new File(
-  providers.exec {
-    workingDir(rootDir)
-    commandLine("node", "--print", "require.resolve('react-native/package.json')")
-  }.standardOutput.asText.get().trim(),
-  "../android"
+    providers.exec {
+        workingDir(rootDir)
+        commandLine("node", "--print", "require.resolve('react-native/package.json')")
+    }.standardOutput.asText.get().trim(),
+    "../android"
 )
 
 allprojects {
-  repositories {
-    maven {
-      // @generated begin react-native-background-geolocation-maven - expo prebuild (DO NOT MODIFY) sync-4b2bae87fd8579c445d8885f6bdc8542d9d0bbca
-      //maven { url "${project(":react-native-background-geolocation").projectDir}/libs" }
-      maven { url 'https://developer.huawei.com/repo/' }
-      // @generated end react-native-background-geolocation-maven
+    repositories {
+        google() // Must include for ML Kit
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
 
-      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-      url(reactNativeAndroidDir)
+        if (reactNativeAndroidDir.exists()) {
+            maven { url(reactNativeAndroidDir) }
+        }
     }
-
-    google()
-    mavenCentral()
-    maven { url 'https://www.jitpack.io' }
-  }
-
-  // ✅ Force consistent Google Play Services version to fix FusedLocationProviderClient class/interface issue
-  configurations.all {
-    resolutionStrategy {
-      force "com.google.android.gms:play-services-location:21.0.1"
-    }
-  }
 }
 
+// Ensure all subprojects use the same repos
+subprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+
+        if (reactNativeAndroidDir.exists()) {
+            maven { url(reactNativeAndroidDir) }
+        }
+    }
+}
+
+// Apply Expo and React Native Gradle plugins
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
