@@ -16,10 +16,10 @@ export default function Index() {
     return (
       <View style={styles.container}>
         <Image
-          source={require("../../assets/images/icon.png")} // put your logo/icon here
+          source={require("../../assets/images/logo.png")} // put your logo/icon here
           style={styles.logo}
         />
-        <Text style={styles.title}>Hostel Management</Text>
+        <Text style={styles.title}>JNTUACEP{"\n"}Hostel Management</Text>
         <ActivityIndicator size="large" color="#007AFF" style={{ marginTop: 20 }} />
       </View>
     );
@@ -43,6 +43,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
+    textAlign: "center",
     fontWeight: "bold",
     color: "#333",
   },
