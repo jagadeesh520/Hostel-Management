@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
-import { FaceModalCamera } from "../WardenDashboard/FaceModalCamera";
+import { FaceModalScanner } from "../WardenDashboard/FaceModalCamera";
 
 interface CampusInfo {
   latitude: number;
@@ -128,7 +128,7 @@ export default function AttendanceScanner() {
   return (
     <View style={{ flex: 1 }}>
       {student && (
-        <FaceModalCamera
+        <FaceModalScanner
           visible={faceModalVisible}
           student={student}
           onClose={() => setFaceModalVisible(false)}

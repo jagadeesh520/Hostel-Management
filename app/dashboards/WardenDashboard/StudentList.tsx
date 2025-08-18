@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { FaceModalCamera } from "./FaceModalCamera";
+import { FaceModalScanner } from "./FaceModalCamera";
 
 type Student = {
   blockName: any;
@@ -244,7 +244,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       />
 
       {selectedStudent && (
-        <FaceModalCamera
+        <FaceModalScanner
           visible={modalVisible}
           student={selectedStudent}
           onClose={() => setModalVisible(false)}

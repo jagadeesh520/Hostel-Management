@@ -1,19 +1,22 @@
-// components/FaceModalCamera.tsx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import * as ImagePicker from "expo-image-picker";
-import React, { useState } from "react";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import React, { useEffect, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Modal,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-export const FaceModalCamera = ({
+// ...imports remain unchanged
+
+export const FaceModalScanner = ({
   visible,
   onClose,
   student,
@@ -24,111 +27,326 @@ export const FaceModalCamera = ({
   student: any;
   onMatchSuccess: () => void;
 }) => {
-  const [capturedUri, setCapturedUri] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [facing, setFacing] = useState<"front" | "back">("front");
+  const [permission, requestPermission] = useCameraPermissions();
+  const [processing, setProcessing] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
+  const processingRef = useRef(false);
+  const lastProcessedRef = useRef(0);
+  const errorCountRef = useRef(0);
+  const opacityAnim = useRef(new Animated.Value(1)).current;
 
-  const handleCapture = async () => {
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-    });
+  const fadeOut = () => {
+    setTimeout(() => {
+      Animated.timing(opacityAnim, {
+        toValue: 0.3,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }, 0);
+  };
 
-    if (!result.canceled) {
-      const uri = result.assets?.[0]?.uri;
-      if (uri) {
-        setCapturedUri(uri);
-        sendToBackend(uri);
+  const fadeIn = () => {
+    setTimeout(() => {
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
+        setProcessing(false);
+      });
+    }, 0);
+  };
+
+  useEffect(() => {
+    if (!visible) {
+      errorCountRef.current = 0;
+      return;
+    }
+
+    let frameRequest: number;
+    const processFrames = async () => {
+      if (errorCountRef.current > 3) {
+        Alert.alert("Notice", "Adjust your position and try again");
+        errorCountRef.current = 0;
+        return;
+      }
+
+      if (!cameraRef.current || processingRef.current) {
+        frameRequest = requestAnimationFrame(processFrames);
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastProcessedRef.current < 2000) {
+        frameRequest = requestAnimationFrame(processFrames);
+        return;
+      }
+
+      processingRef.current = true;
+      lastProcessedRef.current = now;
+      setProcessing(true);
+      fadeOut();
+
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.8,
+          skipProcessing: true,
+          base64: false,
+        });
+        await processImage(photo.uri);
+        errorCountRef.current = 0;
+      } catch (error) {
+        console.error("Frame processing error:", error);
+        errorCountRef.current += 1;
+      } finally {
+        processingRef.current = false;
+        fadeIn();
+        frameRequest = requestAnimationFrame(processFrames);
+      }
+    };
+
+    const delay = setTimeout(() => {
+      frameRequest = requestAnimationFrame(processFrames);
+    }, 300);
+
+    return () => {
+      clearTimeout(delay);
+      cancelAnimationFrame(frameRequest);
+    };
+  }, [visible, student.rollNo]);
+
+  const processImage = async (uri: string) => {
+    const token = await AsyncStorage.getItem("wardenToken");
+    if (!token) {
+      Alert.alert("Error", "Authentication required");
+      return;
+    }
+
+    const normalizedUri =
+      Platform.OS === "ios" ? uri.replace("file://", "") : uri;
+
+    const formData = new FormData();
+    formData.append("faceImage", {
+      uri: normalizedUri,
+      name: "scan.jpg",
+      type: "image/jpeg",
+    } as any);
+    formData.append("rollNo", student.rollNo);
+
+    try {
+      const res = await axios.post(
+        "http://192.168.29.83:5000/api/attendance/recognize",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 15000,
+        }
+      );
+
+      if (res.data?.student) {
+        if (res.data.message?.includes("Already")) {
+          Alert.alert(
+            "Already Present",
+            `${student.studentName} is already marked present.`
+          );
+        } else {
+          Alert.alert(
+            "Recognized",
+            `${student.studentName} marked as present.`
+          );
+          onMatchSuccess();
+        }
+        onClose();
+      } else {
+        Alert.alert("Not Recognized", "Face did not match the student record.");
+      }
+    } catch (error: any) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      if (status === 403 && data?.message?.includes("Face mismatch")) {
+        const scanned = data.recognizedId || "Unknown";
+        Alert.alert(
+          "Face Mismatch",
+          `You're logged in as ${student.rollNo}, but scanned face belongs to ${scanned}.`
+        );
+      } else if (
+        status === 404 &&
+        data?.message?.includes("Student not recognized")
+      ) {
+        Alert.alert("Not Recognized", "Face did not match any student record.");
+      } else {
+        console.error("API Error:", data || error.message);
+        Alert.alert(
+          "Error",
+          "Recognition service unavailable. Please try again."
+        );
       }
     }
   };
 
- const sendToBackend = async (uri: string) => {
-  setLoading(true);
-  const token = await AsyncStorage.getItem("wardenToken");
+  if (!permission) return <View style={styles.container} />;
 
-  const formData = new FormData();
-  formData.append("faceImage", {
-    uri,
-    name: "face.jpg",
-    type: "image/jpeg",
-  } as any);
-
-  formData.append("rollNo", student.rollNo); // Optional debug info
-
-  try {
-    const res = await axios.post(
-      "http://192.168.29.83:5000/api/attendance/recognize",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data", // ✅ Important
-        },
-      }
+  if (!permission.granted) {
+    return (
+      <View style={styles.permissionContainer}>
+        <Text style={styles.permissionText}>
+          We need camera permission to scan your face
+        </Text>
+        <TouchableOpacity onPress={requestPermission} style={styles.button}>
+          <Text style={styles.buttonText}>Allow Camera Access</Text>
+        </TouchableOpacity>
+      </View>
     );
-
-    const matched = res.data?.student;
-
-    if (
-      matched?.rollNo === student.rollNo &&
-      matched?.studentName === student.studentName
-    ) {
-      Alert.alert("✅ Recognized", `${student.studentName} marked as present.`);
-      onMatchSuccess();
-      onClose();
-    } else {
-      Alert.alert("❌ Not Matched", "Face does not match selected student.");
-    }
-  } catch (error) {
-    console.error("Recognition Error:", error);
-    Alert.alert("❌ Error", "Something went wrong during face recognition.");
-  } finally {
-    setLoading(false);
   }
-};
-
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, padding: 20, justifyContent: "center" }}>
-        <Text style={{ fontSize: 18, textAlign: "center", marginBottom: 10 }}>
-          Scan Face of: {student.studentName}
-        </Text>
-
-        <TouchableOpacity
-          onPress={handleCapture}
-          style={{
-            backgroundColor: "#2c3e50",
-            padding: 12,
-            borderRadius: 6,
-            alignItems: "center",
-            marginBottom: 20,
-          }}
+      <View style={styles.container}>
+        <Animated.View
+          style={[styles.cameraContainer, { opacity: opacityAnim }]}
         >
-          <Text style={{ color: "#fff" }}>📷 Capture Face</Text>
-        </TouchableOpacity>
-
-        {capturedUri && (
-          <Image
-            source={{ uri: capturedUri }}
-            style={{
-              width: 200,
-              height: 200,
-              alignSelf: "center",
-              borderRadius: 8,
-              marginTop: 10,
-            }}
+          <CameraView
+            style={styles.camera}
+            facing={facing}
+            ref={cameraRef}
+            enableTorch={false}
           />
-        )}
+        </Animated.View>
 
-        {loading && (
-          <ActivityIndicator size="large" color="#2c3e50" style={{ marginTop: 20 }} />
-        )}
+        <View style={styles.overlay}>
+          <View style={styles.scanFrame}>
+            {processing && (
+              <View style={styles.scanningIndicator}>
+                <ActivityIndicator size="large" color="#00FF00" />
+                <Text style={styles.scanningText}>Scanning...</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.instruction}>
+            Position {student.studentName}'s face inside the frame
+          </Text>
+        </View>
 
-        <TouchableOpacity onPress={onClose} style={{ marginTop: 30, alignItems: "center" }}>
-          <Text style={{ color: "#e74c3c" }}>Cancel</Text>
-        </TouchableOpacity>
+        <View style={styles.footer}>
+          <TouchableOpacity
+            onPress={() => setFacing(facing === "front" ? "back" : "front")}
+            style={styles.actionButton}
+          >
+            <Text style={styles.buttonText}>Flip Camera</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={onClose}
+            style={[styles.actionButton, styles.cancelButton]}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </Modal>
   );
 };
+
+// ...styles remain unchanged
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "black",
+    position: "relative",
+  },
+  cameraContainer: {
+    flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#f5f5f5",
+  },
+  permissionText: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#333",
+  },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  scanFrame: {
+    width: 250,
+    height: 300,
+    borderWidth: 2,
+    borderColor: "rgba(0, 255, 0, 0.7)",
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scanningIndicator: {
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 8,
+  },
+  scanningText: {
+    color: "white",
+    marginTop: 8,
+    fontSize: 14,
+  },
+  instruction: {
+    color: "white",
+    fontSize: 16,
+    marginTop: 20,
+    textAlign: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 10,
+    borderRadius: 5,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  actionButton: {
+    backgroundColor: "rgba(0,0,0,0.7)",
+    padding: 15,
+    borderRadius: 10,
+    minWidth: 120,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "rgba(255,50,50,0.8)",
+  },
+  button: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#2c3e50",
+    marginBottom: 16,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+});
