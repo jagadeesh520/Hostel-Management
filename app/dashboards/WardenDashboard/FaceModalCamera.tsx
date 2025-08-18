@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,8 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-// ...imports remain unchanged
 
 export const FaceModalScanner = ({
   visible,
@@ -30,24 +28,23 @@ export const FaceModalScanner = ({
   const [facing, setFacing] = useState<"front" | "back">("front");
   const [permission, requestPermission] = useCameraPermissions();
   const [processing, setProcessing] = useState(false);
+  const [countdown, setCountdown] = useState(50);
   const cameraRef = useRef<CameraView>(null);
   const processingRef = useRef(false);
-  const lastProcessedRef = useRef(0);
-  const errorCountRef = useRef(0);
   const opacityAnim = useRef(new Animated.Value(1)).current;
 
-  const fadeOut = () => {
-    setTimeout(() => {
+  const fadeOut = useCallback(() => {
+    requestAnimationFrame(() => {
       Animated.timing(opacityAnim, {
         toValue: 0.3,
         duration: 200,
         useNativeDriver: true,
       }).start();
-    }, 0);
-  };
+    });
+  }, [opacityAnim]);
 
-  const fadeIn = () => {
-    setTimeout(() => {
+  const fadeIn = useCallback(() => {
+    requestAnimationFrame(() => {
       Animated.timing(opacityAnim, {
         toValue: 1,
         duration: 300,
@@ -55,66 +52,48 @@ export const FaceModalScanner = ({
       }).start(() => {
         setProcessing(false);
       });
-    }, 0);
-  };
+    });
+  }, [opacityAnim]);
 
   useEffect(() => {
-    if (!visible) {
-      errorCountRef.current = 0;
-      return;
+    if (!visible) return;
+    setCountdown(50);
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          onClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [visible]);
+
+  const handleManualScan = async () => {
+    if (!cameraRef.current || processingRef.current) return;
+
+    processingRef.current = true;
+    setProcessing(true);
+    fadeOut();
+
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        skipProcessing: true,
+        base64: false,
+      });
+      await processImage(photo.uri);
+    } catch (error) {
+      console.error("Manual scan error:", error);
+    } finally {
+      processingRef.current = false;
+      fadeIn();
     }
-
-    let frameRequest: number;
-    const processFrames = async () => {
-      if (errorCountRef.current > 3) {
-        Alert.alert("Notice", "Adjust your position and try again");
-        errorCountRef.current = 0;
-        return;
-      }
-
-      if (!cameraRef.current || processingRef.current) {
-        frameRequest = requestAnimationFrame(processFrames);
-        return;
-      }
-
-      const now = Date.now();
-      if (now - lastProcessedRef.current < 2000) {
-        frameRequest = requestAnimationFrame(processFrames);
-        return;
-      }
-
-      processingRef.current = true;
-      lastProcessedRef.current = now;
-      setProcessing(true);
-      fadeOut();
-
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          skipProcessing: true,
-          base64: false,
-        });
-        await processImage(photo.uri);
-        errorCountRef.current = 0;
-      } catch (error) {
-        console.error("Frame processing error:", error);
-        errorCountRef.current += 1;
-      } finally {
-        processingRef.current = false;
-        fadeIn();
-        frameRequest = requestAnimationFrame(processFrames);
-      }
-    };
-
-    const delay = setTimeout(() => {
-      frameRequest = requestAnimationFrame(processFrames);
-    }, 300);
-
-    return () => {
-      clearTimeout(delay);
-      cancelAnimationFrame(frameRequest);
-    };
-  }, [visible, student.rollNo]);
+  };
 
   const processImage = async (uri: string) => {
     const token = await AsyncStorage.getItem("wardenToken");
@@ -227,9 +206,30 @@ export const FaceModalScanner = ({
               </View>
             )}
           </View>
+
           <Text style={styles.instruction}>
             Position {student.studentName}'s face inside the frame
           </Text>
+          <Text style={styles.countdownText}>{countdown}s</Text>
+
+          <View style={styles.progressBarContainer}>
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${(countdown / 50) * 100}%` },
+              ]}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={handleManualScan}
+            style={[
+              styles.actionButton,
+              { backgroundColor: "#00FF00", marginTop: 20 },
+            ]}
+          >
+            <Text style={styles.buttonText}>Analyse</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
@@ -251,8 +251,6 @@ export const FaceModalScanner = ({
     </Modal>
   );
 };
-
-// ...styles remain unchanged
 
 const styles = StyleSheet.create({
   container: {
@@ -318,6 +316,23 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
     padding: 10,
     borderRadius: 5,
+  },
+  countdownText: {
+    color: "white",
+    fontSize: 18,
+    marginTop: 10,
+  },
+  progressBarContainer: {
+    height: 6,
+    width: "80%",
+    backgroundColor: "#444",
+    borderRadius: 3,
+    marginTop: 10,
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#00FF00",
+    borderRadius: 3,
   },
   footer: {
     position: "absolute",
