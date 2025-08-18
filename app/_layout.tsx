@@ -106,6 +106,14 @@ export default function RootLayout() {
               title: "Location",
             },
             {
+              name: "dashboards/AdminDashboard/BulkUploadStudents",
+              title: "Student Login Details",
+            },
+            {
+              name: "dashboards/AdminDashboard/AttendanceDashboard",
+              title: "Attendance Dashboard",
+            },
+            {
               name: "dashboards/AdminDashboard/addDailyRates",
               title: "Daily Mess Rates",
             },

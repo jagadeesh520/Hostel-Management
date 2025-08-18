@@ -43,9 +43,11 @@ export default function AdminDashboard() {
       route: "/dashboards/AdminDashboard/view-students",
     },
     {
-      label: "Reports",
-      icon: "📊",
-      color: "#BA55D3", // Purple
+      label: "Issues",
+      icon: (
+        <FontAwesome5 name="exclamation-triangle" size={24} color="white" />
+      ), // Updated icon
+      color: "#dc3545", // Red (represents errors/issues)
       route: "/dashboards/AdminDashboard/reports",
     },
     {
@@ -59,6 +61,18 @@ export default function AdminDashboard() {
       icon: <FontAwesome5 name="map-marked-alt" size={24} color="white" />,
       color: "#FFA500", // Orange
       route: "/dashboards/AdminDashboard/campusLocationForm",
+    },
+    {
+      label: "Upload Logins",
+      icon: <FontAwesome5 name="user-circle" size={24} color="white" />, // changed icon
+      color: "#1E90FF", // Orange
+      route: "/dashboards/AdminDashboard/BulkUploadStudents",
+    },
+    {
+      label: "Reports",
+      icon: "📊",
+      color: "#BA55D3", // Purple
+      route: "/dashboards/AdminDashboard/AttendanceDashboard",
     },
     {
       label: "Logout",
