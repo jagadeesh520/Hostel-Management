@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-start",
     alignItems: "center",
-    paddingTop: 60,
+    paddingTop: 10,
   },
   grid: {
     flexDirection: "row",
