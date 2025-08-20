@@ -20,7 +20,9 @@ interface Student {
 
 export default function AttendanceScanner() {
   const [student, setStudent] = useState<Student | null>(null);
-  const [hasLocationPermission, setHasLocationPermission] = useState<boolean | null>(null);
+  const [hasLocationPermission, setHasLocationPermission] = useState<
+    boolean | null
+  >(null);
   const [campusInfo, setCampusInfo] = useState<CampusInfo | null>(null);
   const [loading, setLoading] = useState(true); // start as loading
   const [faceModalVisible, setFaceModalVisible] = useState(false);
@@ -38,20 +40,24 @@ export default function AttendanceScanner() {
         const locStatus = await Location.requestForegroundPermissionsAsync();
         setHasLocationPermission(locStatus.granted);
         if (!locStatus.granted) {
-          Alert.alert("Location Permission Required", "Enable location to mark attendance.");
+          Alert.alert(
+            "Location Permission Required",
+            "Enable location to mark attendance."
+          );
           setLoading(false);
           return;
         }
 
         // Fetch campus info
-        const res = await fetch("http://192.168.29.83:5000/api/campusLocation/JNTUACEP");
+        const res = await fetch(
+          "http://192.168.29.83:5000/api/campusLocation/JNTUACEP"
+        );
         if (!res.ok) throw new Error("Failed to fetch campus location");
         const json = await res.json();
         setCampusInfo(json.data);
 
         // Check student location immediately
         await validateLocation(parsedStudent, json.data);
-
       } catch (err) {
         console.error("Init failed:", err);
         Alert.alert("Error", "Initialization failed.");
@@ -93,15 +99,18 @@ export default function AttendanceScanner() {
       }
 
       const json = await res.json();
-      if (json.exists) {
-        return Alert.alert("⚠️ Attendance Already Taken", "You have already marked attendance for today.");
+      console.log("resres", json);
+      if (json.status === "Present") {
+        return Alert.alert(
+          "✅ Already Marked",
+          "You are marked present for today."
+        );
       }
 
       // ✅ Inside campus & not marked: show alert then open FaceModalCamera
       Alert.alert("✅ Inside Campus", "You are within campus premises.", [
         { text: "OK", onPress: () => setFaceModalVisible(true) },
       ]);
-
     } catch (err) {
       console.error("Location validation failed:", err);
       Alert.alert("Error", "Failed to get location or check attendance.");
@@ -133,7 +142,10 @@ export default function AttendanceScanner() {
           student={student}
           onClose={() => setFaceModalVisible(false)}
           onMatchSuccess={() =>
-            Alert.alert("✅ Attendance Marked", `${student.studentName} is present.`)
+            Alert.alert(
+              "✅ Attendance Marked",
+              `${student.studentName} is present.`
+            )
           }
         />
       )}
@@ -141,7 +153,12 @@ export default function AttendanceScanner() {
   );
 }
 
-function getDistanceFromLatLonInMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function getDistanceFromLatLonInMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
   const deg2rad = (deg: number) => deg * (Math.PI / 180);
   const R = 6371000;
   const dLat = deg2rad(lat2 - lat1);

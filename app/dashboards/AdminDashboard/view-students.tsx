@@ -40,6 +40,7 @@ export default function ViewStudents() {
   const [type, setType] = useState<"back" | "front">("back");
   const [showCamera, setShowCamera] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
 
   useEffect(() => {
     if (permission && !permission.granted) {
@@ -89,6 +90,7 @@ export default function ViewStudents() {
       setCapturedImages((prev) => [...prev, photoData.uri]);
       setShowCamera(false);
       setTimeout(() => setShowCamera(true), 50);
+      setShowCameraModal(false);
     } else {
       alert("Maximum 5 images allowed.");
     }
@@ -149,15 +151,32 @@ export default function ViewStudents() {
     }
   };
 
-  const CameraComponent = () => (
-    <View style={styles.cameraContainer}>
-      {showCamera && <CameraView ref={cameraRef} style={styles.camera} facing={type} />}
-      <View style={styles.cameraButtonsContainer}>
-        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-          <Text style={styles.buttonText}>📸 Capture</Text>
-        </TouchableOpacity>
+  const CameraModal = () => (
+    <Modal visible={showCameraModal} transparent animationType="slide">
+      <View style={styles.cameraModalContainer}>
+        <View style={styles.cameraModalContent}>
+          <CameraView 
+            ref={cameraRef} 
+            style={styles.fullScreenCamera} 
+            facing={type}
+          />
+          <View style={styles.cameraModalButtons}>
+            <TouchableOpacity 
+              style={styles.captureButton} 
+              onPress={takePicture}
+            >
+              <Text style={styles.buttonText}>📸 Capture</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.closeCameraButton}
+              onPress={() => setShowCameraModal(false)}
+            >
+              <Text style={styles.buttonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 
   return (
@@ -248,7 +267,14 @@ export default function ViewStudents() {
             <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
               <Text style={styles.modalTitle}>✏️ Update Student</Text>
 
-              {capturedImages.length < 5 && <CameraComponent />}
+              {capturedImages.length < 5 && (
+                <TouchableOpacity 
+                  style={styles.openCameraButton}
+                  onPress={() => setShowCameraModal(true)}
+                >
+                  <Text style={styles.buttonText}>📷 Open Camera</Text>
+                </TouchableOpacity>
+              )}
 
               {capturedImages.length > 0 && (
                 <>
@@ -358,6 +384,8 @@ export default function ViewStudents() {
           </View>
         </View>
       </Modal>
+
+      <CameraModal />
     </View>
   );
 }
@@ -398,4 +426,35 @@ const styles = StyleSheet.create({
   captureButton: { padding: 10, backgroundColor: "#28a745", borderRadius: 8 },
   buttonText: { color: "#fff", fontWeight: "bold" },
   buttonRow: { flexDirection: "row", marginTop: 10 },
+  cameraModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+  },
+  cameraModalContent: {
+    flex: 1,
+  },
+  fullScreenCamera: {
+    flex: 1,
+  },
+  cameraModalButtons: {
+    position: 'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  openCameraButton: {
+    padding: 15,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  closeCameraButton: {
+    padding: 10,
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+  },
 });

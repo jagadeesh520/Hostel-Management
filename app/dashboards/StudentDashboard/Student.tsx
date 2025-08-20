@@ -1,11 +1,11 @@
-import { FontAwesome5, Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  FlatList,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -22,6 +22,20 @@ interface Student {
   blockName: string;
   collegeName: string;
   faceImage: string;
+}
+
+interface Stat {
+  id: string;
+  value: string;
+  label: string;
+}
+
+interface MenuItem {
+  id: string;
+  title: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  color: string;
+  onPress: () => void;
 }
 
 export default function StudentDashboard() {
@@ -74,187 +88,243 @@ export default function StudentDashboard() {
     fetchStudent();
   }, []);
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {student ? (
-        <>
-          {/* Profile Header */}
-          <View style={styles.profileHeader}>
-            {student.faceImage && !imageError ? (
-              <Image
-                source={{
-                  uri: `http://192.168.29.83:5000${student.faceImage}`,
-                }}
-                style={styles.faceImage}
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <View style={styles.fallbackCircle}>
-                <Text style={styles.fallbackText}>
-                  {student.studentName?.charAt(0).toUpperCase() || "?"}
-                </Text>
-              </View>
-            )}
-            <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{student.studentName}</Text>
-              <Text style={styles.profileSubText}>
-                Roll No: {student.rollNo}
+  const stats: Stat[] = [
+    { id: "1", value: student?.year || "-", label: "Year" },
+    { id: "2", value: student?.roomNo || "-", label: "Room No" },
+    { id: "3", value: student?.blockName || "-", label: "Block" },
+  ];
+
+  const menuItems: MenuItem[] = [
+    {
+      id: "1",
+      title: "Time Sheet",
+      icon: "calendar",
+      color: "#4cafef",
+      onPress: () => router.push("/dashboards/StudentDashboard/TimesheetScreen"),
+    },
+    {
+      id: "2",
+      title: "Raise Ticket",
+      icon: "chat-processing",
+      color: "#ff8a65",
+      onPress: () => router.push("/dashboards/StudentDashboard/RaiseTicket"),
+    },
+    {
+      id: "3",
+      title: "Self Check-In",
+      icon: "camera",
+      color: "#4db6ac",
+      onPress: async () => {
+        if (!student) {
+          Alert.alert("Error", "Student data not loaded yet.");
+          return;
+        }
+        await AsyncStorage.setItem("currentStudent", JSON.stringify(student));
+        router.push("/dashboards/StudentDashboard/AttendanceScanner");
+      },
+    },
+    {
+      id: "4",
+      title: "My Profile",
+      icon: "account-circle",
+      color: "#9575cd",
+      onPress: () => router.push("/dashboards/StudentDashboard/MyProfile"),
+    },
+    {
+      id: "5",
+      title: "Blog",
+      icon: "notebook-edit",
+      color: "#81c784",
+      onPress: () => router.push("/dashboards/StudentDashboard/BlogScreen"),
+    },
+    {
+      id: "6",
+      title: "Logout",
+      icon: "logout",
+      color: "#f44336",
+      onPress: handleLogout,
+    },
+  ];
+
+  const renderMenuItem = ({ item }: { item: MenuItem }) => (
+    <TouchableOpacity style={styles.menuItem} onPress={item.onPress}>
+      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
+        <MaterialCommunityIcons name={item.icon} size={26} color="#fff" />
+      </View>
+      <Text style={styles.menuText}>{item.title}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderHeader = () => (
+    <>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.profileSection}>
+          {student?.faceImage && !imageError ? (
+            <Image
+              source={{ uri: `http://192.168.29.83:5000${student.faceImage}` }}
+              style={styles.avatar}
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <View style={styles.fallbackCircle}>
+              <Text style={styles.fallbackText}>
+                {student?.studentName?.charAt(0).toUpperCase() || "?"}
               </Text>
             </View>
+          )}
+          <View>
+            <Text style={styles.username}>{student?.studentName}</Text>
+            <Text style={styles.subText}>Roll No: {student?.rollNo}</Text>
           </View>
+        </View>
+        <TouchableOpacity onPress={handleLogout}>
+          <Ionicons name="notifications-outline" size={26} color="#fff" />
+        </TouchableOpacity>
+      </View>
 
-          {/* Greeting */}
-          <Text style={styles.greeting}>
-            Hello,{" "}
-            <Text style={{ fontWeight: "bold" }}>
-              {student.studentName.split(" ")[0]}
-            </Text>
-            !
-          </Text>
+      {/* Stats Section */}
+      <View style={styles.statsContainer}>
+        <FlatList
+          data={stats}
+          renderItem={({ item }) => (
+            <View style={styles.statCard}>
+              <Text style={styles.statValue}>{item.value}</Text>
+              <Text style={styles.statLabel}>{item.label}</Text>
+            </View>
+          )}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        />
+      </View>
+    </>
+  );
 
-          {/* Navigation Cards */}
-          <View style={styles.cardGrid}>
-            <TouchableOpacity
-              style={[styles.cardBox, { backgroundColor: "#f95f62" }]}
-              onPress={() =>
-                router.push("/dashboards/StudentDashboard/TimesheetScreen")
-              }
-            >
-              <Ionicons name="calendar" size={24} color="white" />
-              <Text style={styles.cardLabel}>Time Sheet</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.cardBox, { backgroundColor: "#00c2cb" }]}
-              onPress={() =>
-                router.push("/dashboards/StudentDashboard/RaiseTicket")
-              }
-            >
-              <Ionicons name="chatbox-ellipses" size={24} color="white" />
-              <Text style={styles.cardLabel}>Raise a Ticket</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.cardBox, { backgroundColor: "#4CAF50" }]}
-              onPress={async () => {
-                if (!student) {
-                  Alert.alert("Error", "Student data not loaded yet.");
-                  return;
-                }
-
-                // Save student info temporarily to AsyncStorage
-                await AsyncStorage.setItem(
-                  "currentStudent",
-                  JSON.stringify(student)
-                );
-
-                router.push("/dashboards/StudentDashboard/AttendanceScanner");
-              }}
-            >
-              <Ionicons
-                name="camera"
-                size={24}
-                color="white"
-                style={{ marginRight: 8 }}
-              />
-              <Text style={styles.cardLabel}>Self Check-In</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.cardBox, { backgroundColor: "#5a67f2" }]}
-              onPress={() =>
-                router.push("/dashboards/StudentDashboard/MyProfile")
-              }
-            >
-              <FontAwesome5 name="user-circle" size={24} color="white" />
-              <Text style={styles.cardLabel}>My Profile</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.cardBox, { backgroundColor: "#f39c12" }]}
-              onPress={handleLogout}
-            >
-              <Ionicons name="log-out-outline" size={24} color="white" />
-              <Text style={styles.cardLabel}>Logout</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      ) : (
-        <Text>Loading student info...</Text>
-      )}
-    </ScrollView>
+  return student ? (
+    <FlatList
+      data={menuItems}
+      renderItem={renderMenuItem}
+      keyExtractor={(item) => item.id}
+      numColumns={2}
+      columnWrapperStyle={styles.row}
+      contentContainerStyle={styles.container}
+      ListHeaderComponent={renderHeader}
+    />
+  ) : (
+    <Text style={styles.loadingText}>Loading student info...</Text>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 20,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f5f7ff",
+    paddingHorizontal: 15,
+    paddingBottom: 20,
   },
-  profileHeader: {
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#6a4cff",
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    borderRadius: 16,
+    marginTop: 40,
+    marginBottom: 20,
+  },
+  profileSection: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
-    backgroundColor: "#fff9c4",
-    padding: 10,
-    borderRadius: 12,
   },
-  faceImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
+  avatar: {
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   fallbackCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 55,
+    height: 55,
+    borderRadius: 28,
     backgroundColor: "#007bff",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 15,
+    marginRight: 12,
   },
   fallbackText: {
-    color: "white",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  profileInfo: {
-    flexShrink: 1,
-  },
-  profileName: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  profileSubText: {
-    fontSize: 14,
-    color: "#555",
-  },
-  greeting: {
+    color: "#fff",
     fontSize: 20,
-    marginVertical: 15,
+    fontWeight: "bold",
   },
-  cardGrid: {
+  username: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  subText: {
+    color: "#e0e0e0",
+    fontSize: 13,
+  },
+  statsContainer: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    rowGap: 15,
-  },
-  cardBox: {
-    width: "48%",
-    aspectRatio: 1.2,
+    backgroundColor: "#6a4cff",
     borderRadius: 16,
-    padding: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    marginBottom: 20,
+  },
+  statCard: {
+    width: 110,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 20,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  statLabel: {
+    color: "#e0e0e0",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  row: {
+    justifyContent: "space-between",
+    marginBottom: 15,
+  },
+  menuItem: {
+    backgroundColor: "#fff",
+    flex: 1,
+    margin: 5,
+    borderRadius: 16,
+    alignItems: "center",
+    paddingVertical: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  iconContainer: {
+    width: 55,
+    height: 55,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 3,
+    marginBottom: 10,
   },
-  cardLabel: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginTop: 10,
+  menuText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
     textAlign: "center",
+  },
+  loadingText: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 20,
+    color: "#555",
   },
 });

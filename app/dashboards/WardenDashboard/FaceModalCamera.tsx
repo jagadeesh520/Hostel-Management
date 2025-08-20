@@ -57,12 +57,18 @@ export const FaceModalScanner = ({
 
   useEffect(() => {
     if (!visible) return;
-    setCountdown(50);
 
-    const timer = setInterval(() => {
+    setCountdown(50);
+    setProcessing(true); // block scan initially
+
+    const settleTimer = setTimeout(() => {
+      setProcessing(false); // allow scan after 1.5s
+    }, 1500);
+
+    const countdownTimer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
+          clearInterval(countdownTimer);
           onClose();
           return 0;
         }
@@ -70,7 +76,10 @@ export const FaceModalScanner = ({
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(settleTimer);
+      clearInterval(countdownTimer);
+    };
   }, [visible]);
 
   const handleManualScan = async () => {
@@ -113,8 +122,8 @@ export const FaceModalScanner = ({
     } as any);
     formData.append("rollNo", student.rollNo);
 
-    try {
-      const res = await axios.post(
+    const sendRequest = async () => {
+      return axios.post(
         "http://192.168.29.83:5000/api/attendance/recognize",
         formData,
         {
@@ -125,6 +134,21 @@ export const FaceModalScanner = ({
           timeout: 15000,
         }
       );
+    };
+
+    try {
+      let res;
+      try {
+        res = await sendRequest();
+      } catch (error: any) {
+        if (error.message === "Network Error") {
+          console.warn("Retrying after network error...");
+          await new Promise((r) => setTimeout(r, 1000));
+          res = await sendRequest(); // retry once
+        } else {
+          throw error;
+        }
+      }
 
       if (res.data?.student) {
         if (res.data.message?.includes("Already")) {
@@ -158,6 +182,12 @@ export const FaceModalScanner = ({
         data?.message?.includes("Student not recognized")
       ) {
         Alert.alert("Not Recognized", "Face did not match any student record.");
+      } else if (error.message === "Network Error") {
+        console.error("Network Error:", error);
+        Alert.alert(
+          "Network Issue",
+          "Unable to reach recognition service. Please check your connection and try again."
+        );
       } else {
         console.error("API Error:", data || error.message);
         Alert.alert(
@@ -223,9 +253,13 @@ export const FaceModalScanner = ({
 
           <TouchableOpacity
             onPress={handleManualScan}
+            disabled={processing}
             style={[
               styles.actionButton,
-              { backgroundColor: "#00FF00", marginTop: 20 },
+              {
+                backgroundColor: processing ? "#888" : "#00FF00",
+                marginTop: 20,
+              },
             ]}
           >
             <Text style={styles.buttonText}>Analyse</Text>
@@ -271,51 +305,11 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: "#f5f5f5",
   },
-  permissionText: {
+    permissionText: {
     fontSize: 16,
     marginBottom: 20,
     textAlign: "center",
     color: "#333",
-  },
-  overlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  scanFrame: {
-    width: 250,
-    height: 300,
-    borderWidth: 2,
-    borderColor: "rgba(0, 255, 0, 0.7)",
-    borderRadius: 10,
-    backgroundColor: "rgba(0,0,0,0.2)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  scanningIndicator: {
-    alignItems: "center",
-    padding: 20,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 8,
-  },
-  scanningText: {
-    color: "white",
-    marginTop: 8,
-    fontSize: 14,
-  },
-  instruction: {
-    color: "white",
-    fontSize: 16,
-    marginTop: 20,
-    textAlign: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    padding: 10,
-    borderRadius: 5,
   },
   countdownText: {
     color: "white",
@@ -364,4 +358,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
   },
+  scanningText: {
+    color: "white",
+    fontSize: 14,
+    marginTop: 8,
+  },
+    overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  scanFrame: {
+    width: 250,
+    height: 300,
+    borderWidth: 2,
+    borderColor: "rgba(0, 255, 0, 0.7)",
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scanningIndicator: {
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 8,
+  },
+  instruction: {
+    color: "white",
+    fontSize: 16,
+    marginTop: 20,
+    textAlign: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 10,
+    borderRadius: 5,
+  },
+
 });

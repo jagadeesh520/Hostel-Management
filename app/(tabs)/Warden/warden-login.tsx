@@ -15,7 +15,7 @@ import {
 
 const BASE_URL = "http://192.168.29.83:5000"; // Replace with actual backend URL
 
-export default function AdminLogin() {
+export default function WardenLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -52,7 +52,7 @@ export default function AdminLogin() {
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
 
       // Navigate to Warden Dashboard
-      router.replace("/dashboards/WardenDashboard/Warden");
+      router.replace("/dashboards/WardenDashboard/WardenDashbord");
     } catch (error) {
       console.error("Login error:", error);
       Alert.alert("Login Failed");

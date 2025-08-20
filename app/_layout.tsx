@@ -146,6 +146,10 @@ export default function RootLayout() {
               title: "My Profile",
             },
             {
+              name: "dashboards/StudentDashboard/BlogScreen",
+              title: "Student Blog",
+            },
+            {
               name: "dashboards/StudentDashboard/AttendanceScanner",
               title: "Self Check-In",
             },

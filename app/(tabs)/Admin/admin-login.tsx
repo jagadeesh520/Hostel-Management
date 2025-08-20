@@ -34,7 +34,7 @@ export default function AdminLogin() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: username, password }),
+        body: JSON.stringify({ email: username.trim().toLowerCase(), password }),
       });
 
       let data;
@@ -75,7 +75,7 @@ export default function AdminLogin() {
 
         <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="Email"
           placeholderTextColor="#999"
           value={username}
           onChangeText={setUsername}

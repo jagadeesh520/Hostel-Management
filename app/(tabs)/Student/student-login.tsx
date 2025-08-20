@@ -14,7 +14,7 @@ import {
   View,
 } from "react-native";
 
-export default function AdminLogin() {
+export default function StudentLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -35,7 +35,7 @@ export default function AdminLogin() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email: username, password }), // ✅ Fixed here
+          body: JSON.stringify({ email: username.trim().toLowerCase(), password }), // ✅ Fixed here
         }
       );
 
@@ -68,7 +68,7 @@ export default function AdminLogin() {
 
         <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="Email"
           placeholderTextColor="#999"
           value={username}
           onChangeText={setUsername}
