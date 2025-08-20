@@ -118,12 +118,36 @@ export default function RootLayout() {
               title: "Daily Mess Rates",
             },
             {
-              name: "dashboards/WardenDashboard/Warden",
+              name: "dashboards/WardenDashboard/WardenDashbord",
               title: "Warden Dashboard",
+            },
+            {
+              name: "dashboards/WardenDashboard/WardenTickets",
+              title: "Assigned Tickets",
             },
             {
               name: "dashboards/WardenDashboard/StudentListScreen",
               title: "Take Attendance",
+            },
+            {
+              name: "dashboards/WardenDashboard/AddMenu",
+              title: "Add Menu",
+            },
+            {
+              name: "dashboards/WardenDashboard/MenuChild",
+              title: "Menu Details",
+            },
+            {
+              name: "dashboards/WardenDashboard/BlocksChild",
+              title: "Block Details",
+            },
+            {
+              name: "dashboards/WardenDashboard/AttendanceChild",
+              title: "Attendance",
+            },
+            {
+              name: "dashboards/WardenDashboard/CreateIssue",
+              title: "Create Request to Admin",
             },
             {
               name: "dashboards/WardenDashboard/StudentList",
