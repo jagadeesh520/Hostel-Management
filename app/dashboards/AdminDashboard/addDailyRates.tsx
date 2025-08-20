@@ -2,12 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import {
-    Alert,
-    Button,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Button,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 const MessFeeCalculator = () => {
@@ -145,7 +145,7 @@ const MessFeeCalculator = () => {
         Mess Fee - {monthName} {year}
       </Text>
 
-      <Text>Boys Amount (per day)</Text>
+      <Text>Boys Hostel (per day)</Text>
       <TextInput
         keyboardType="numeric"
         placeholder="e.g. 300"
@@ -155,7 +155,7 @@ const MessFeeCalculator = () => {
       />
       <Text>Total for Boys: ₹{calculateTotal(boyRate)}</Text>
 
-      <Text style={{ marginTop: 20 }}>Girls Amount (per day)</Text>
+      <Text style={{ marginTop: 20 }}>Girls Hostel (per day)</Text>
       <TextInput
         keyboardType="numeric"
         placeholder="e.g. 250"

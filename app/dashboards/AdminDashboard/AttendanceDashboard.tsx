@@ -69,19 +69,13 @@ const AttendanceDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   // month navigation + selected date
-  const [currentMonth, setCurrentMonth] = useState<Date>(
-    firstOfMonth(new Date())
-  );
-  const [selectedDate, setSelectedDate] = useState<string | null>(
-    toYMD(new Date())
-  );
+  const [currentMonth, setCurrentMonth] = useState<Date>(firstOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState<string | null>(toYMD(new Date()));
 
   // modal list of students for selected date
   const [modalVisible, setModalVisible] = useState(false);
   const [studentsOnDate, setStudentsOnDate] = useState<AttendanceRecord[]>([]);
-  const [statusFilter, setStatusFilter] = useState<
-    "All" | "Present" | "Absent"
-  >("All");
+  const [statusFilter, setStatusFilter] = useState<"All" | "Present" | "Absent">("All");
 
   useEffect(() => {
     fetchAttendance();
@@ -190,7 +184,7 @@ const AttendanceDashboard = () => {
           studentName: student.studentName,
           blockName: student.blockName,
           phone: student.phone,
-          parentPhone: "", // fill if available
+          parentPhone: "",
         });
       }
       // future date + no record => skip
@@ -198,12 +192,12 @@ const AttendanceDashboard = () => {
     return records;
   };
 
+  // ⬇️ Change: just select the date; do NOT open the list
   const onDayPress = (day: DayObj) => {
     const dayStr = day.dateString;
-    setStudentsOnDate(buildDayRecords(dayStr));
     setSelectedDate(dayStr);
-    setModalVisible(true);
     setStatusFilter("All");
+    // no modal here
   };
 
   // Progress (Present %) for selected date (or today if none)
@@ -277,13 +271,10 @@ const AttendanceDashboard = () => {
           theme={{ todayTextColor: "#2563EB" }}
         />
 
-        {/* Progress bar card (selected date or today) */}
-        {/* Progress bar card (selected date or today) */}
+        {/* Progress card (selected date or today) */}
         <View style={styles.progressCard}>
           <Text style={styles.progressTitle}>
-            {selectedDate
-              ? `Attendance on ${selectedDate}`
-              : "Today’s Attendance"}
+            {selectedDate ? `Attendance on ${selectedDate}` : "Today’s Attendance"}
           </Text>
 
           {/* Present row */}
@@ -333,24 +324,21 @@ const AttendanceDashboard = () => {
           </View>
 
           <Text style={styles.progressSmall}>
-            {dayStats.present} Present / {dayStats.absent} Absent /{" "}
-            {dayStats.total} Total
+            {dayStats.present} Present / {dayStats.absent} Absent / {dayStats.total} Total
           </Text>
 
-          {/* Quick open list for the same date */}
+          {/* View Students now opens the modal */}
           <TouchableOpacity
             style={styles.openListBtn}
             onPress={() => {
-              const records = buildDayRecords(dayStats.day);
+              const day = selectedDate || toYMD(new Date());
+              const records = buildDayRecords(day);
               setStudentsOnDate(records);
-              setSelectedDate(dayStats.day);
               setStatusFilter("All");
               setModalVisible(true);
             }}
           >
-            <Text
-              style={{ color: "#fff", fontWeight: "700", textAlign: "center" }}
-            >
+            <Text style={{ color: "#fff", fontWeight: "700", textAlign: "center" }}>
               View Students
             </Text>
           </TouchableOpacity>
@@ -369,9 +357,7 @@ const AttendanceDashboard = () => {
             {["All", "Present", "Absent"].map((status) => (
               <TouchableOpacity
                 key={status}
-                onPress={() =>
-                  setStatusFilter(status as "All" | "Present" | "Absent")
-                }
+                onPress={() => setStatusFilter(status as "All" | "Present" | "Absent")}
                 style={{
                   paddingVertical: 6,
                   paddingHorizontal: 12,
@@ -380,9 +366,7 @@ const AttendanceDashboard = () => {
                   marginRight: 10,
                 }}
               >
-                <Text
-                  style={{ color: statusFilter === status ? "#fff" : "#000" }}
-                >
+                <Text style={{ color: statusFilter === status ? "#fff" : "#000" }}>
                   {status}
                 </Text>
               </TouchableOpacity>
@@ -417,10 +401,7 @@ const AttendanceDashboard = () => {
               <View
                 style={[
                   styles.recordRow,
-                  {
-                    backgroundColor:
-                      item.status === "Absent" ? "#ffe6e6" : "#fff",
-                  },
+                  { backgroundColor: item.status === "Absent" ? "#ffe6e6" : "#fff" },
                 ]}
               >
                 <Text style={{ flex: 1 }}>{item.studentName}</Text>
@@ -453,13 +434,8 @@ const AttendanceDashboard = () => {
             )}
           />
 
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={() => setModalVisible(false)}
-          >
-            <Text
-              style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}
-            >
+          <TouchableOpacity style={styles.closeBtn} onPress={() => setModalVisible(false)}>
+            <Text style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}>
               Close
             </Text>
           </TouchableOpacity>
