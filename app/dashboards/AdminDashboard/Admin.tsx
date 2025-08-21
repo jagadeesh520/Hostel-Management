@@ -57,35 +57,68 @@ export default function AdminDashboard() {
   };
 
   const menuItems: MenuItem[] = [
-    { label: "Create Hostel", icon: "🏠", color: "#FF9E44", route: "/dashboards/AdminDashboard/create-hostel" },
-    { label: "Manage Wardens", icon: "👮", color: "#4CD964", route: "/dashboards/AdminDashboard/manage-wardens" },
-    { label: "Upload Students", icon: "📤", color: "#5AC8FA", route: "/dashboards/AdminDashboard/upload-students" },
-    { label: "View Students", icon: "📄", color: "#FF2D55", route: "/dashboards/AdminDashboard/view-students" },
+    {
+      label: "Create Hostel",
+      icon: <FontAwesome5 name="building" size={20} color="white" />,
+      color: "#FF9E44", // orange
+      route: "/dashboards/AdminDashboard/create-hostel",
+    },
+    {
+      label: "Manage Wardens",
+      icon: <FontAwesome5 name="user-shield" size={20} color="white" />,
+      color: "#4CD964", // green
+      route: "/dashboards/AdminDashboard/manage-wardens",
+    },
+    {
+      label: "Upload Students",
+      icon: <FontAwesome5 name="upload" size={20} color="white" />,
+      color: "#5AC8FA", // light blue
+      route: "/dashboards/AdminDashboard/upload-students",
+    },
+    {
+      label: "View Students",
+      icon: <FontAwesome5 name="users" size={20} color="white" />,
+      color: "#FF2D55", // pink/red
+      route: "/dashboards/AdminDashboard/view-students",
+    },
     {
       label: "Issues",
-      icon: <FontAwesome5 name="exclamation-triangle" size={20} color="white" />,
-      color: "#FF3B30",
+      icon: (
+        <FontAwesome5 name="exclamation-triangle" size={20} color="white" />
+      ),
+      color: "#FF3B30", // red
       route: "/dashboards/AdminDashboard/reports",
     },
     {
       label: "Daily Rates",
       icon: <FontAwesome5 name="rupee-sign" size={20} color="white" />,
-      color: "#34C759",
+      color: "#34C759", // green (darker)
       route: "/dashboards/AdminDashboard/addDailyRates",
     },
     {
       label: "Location",
       icon: <FontAwesome5 name="map-marked-alt" size={20} color="white" />,
-      color: "#FF9500",
+      color: "#FF9500", // amber
       route: "/dashboards/AdminDashboard/campusLocationForm",
     },
     {
       label: "Upload Logins",
-      icon: <FontAwesome5 name="user-circle" size={20} color="white" />,
-      color: "#007AFF",
+      icon: <FontAwesome5 name="user-plus" size={20} color="white" />,
+      color: "#007AFF", // blue
       route: "/dashboards/AdminDashboard/BulkUploadStudents",
     },
-    { label: "Reports", icon: "📊", color: "#AF52DE", route: "/dashboards/AdminDashboard/AttendanceDashboard" },
+    {
+      label: "Today's Menu",
+      icon: <FontAwesome5 name="utensils" size={20} color="white" />,
+      color: "#8D6E63", // brown (food-related, unique)
+      route: "/dashboards/WardenDashboard/MenuChild",
+    },
+    {
+      label: "Reports",
+      icon: <FontAwesome5 name="chart-bar" size={20} color="white" />,
+      color: "#AF52DE", // purple
+      route: "/dashboards/AdminDashboard/AttendanceDashboard",
+    },
   ];
 
   const handleNavigation = (item: MenuItem) => {
@@ -98,7 +131,9 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}>
+      <View
+        style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}
+      >
         <Text style={styles.headerTitle}>JNTUACEP</Text>
         <Text style={styles.headerSubtitle}>Hostel Management Dashboard</Text>
       </View>
@@ -117,7 +152,9 @@ export default function AdminDashboard() {
               activeOpacity={0.7}
             >
               <View style={styles.menuItemContent}>
-                <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: item.color }]}
+                >
                   {typeof item.icon === "string" ? (
                     <Text style={styles.iconText}>{item.icon}</Text>
                   ) : (
@@ -158,9 +195,16 @@ export default function AdminDashboard() {
         onRequestClose={() => setLogoutModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: Math.max(20, insets.bottom) }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { paddingBottom: Math.max(20, insets.bottom) },
+            ]}
+          >
             <Text style={styles.modalTitle}>Confirm Logout</Text>
-            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to logout?
+            </Text>
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.cancelButton]}
@@ -168,7 +212,10 @@ export default function AdminDashboard() {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
-              <Pressable style={[styles.modalButton, styles.logoutButtonModal]} onPress={handleLogout}>
+              <Pressable
+                style={[styles.modalButton, styles.logoutButtonModal]}
+                onPress={handleLogout}
+              >
                 <Text style={styles.logoutButtonTextModal}>Logout</Text>
               </Pressable>
             </View>
