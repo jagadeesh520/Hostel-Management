@@ -1,17 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     FlatList,
+    Image,
     SafeAreaView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
+import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
-type MenuItem = { name: string; category: string };
+type MenuItem = { name: string; category: string; imageUrl?: string | null };
 type MenuDoc = { date: string; items: MenuItem[] };
 
 const BASE_URL = "http://192.168.29.83:5000";
@@ -19,6 +21,7 @@ const BASE_URL = "http://192.168.29.83:5000";
 export default function MenuChild() {
   const [menu, setMenu] = useState<MenuDoc | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isWarden, setIsWarden] = useState(false); // token presence == warden UI
 
   useEffect(() => {
     load();
@@ -38,14 +41,17 @@ export default function MenuChild() {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("wardenToken");
-      if (!token) return Alert.alert("Error", "Warden not logged in.");
-      const headers = { Authorization: `Bearer ${token}` };
+      setIsWarden(!!token);
+
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
       const date = todayIST();
 
+      // GET does NOT need token. We pass it only if present.
       const res = await axios.get<MenuDoc>(`${BASE_URL}/api/menu`, {
         params: { date },
         headers,
       });
+
       setMenu(res.data || { date, items: [] });
     } catch (e) {
       console.error(e);
@@ -57,6 +63,10 @@ export default function MenuChild() {
   };
 
   const confirmDelete = (category: string, name: string) => {
+    if (!isWarden) {
+      Alert.alert("Not allowed", "Only wardens can modify the menu.");
+      return;
+    }
     Alert.alert(
       "Remove item",
       `Delete "${name}" from ${category}?`,
@@ -75,33 +85,36 @@ export default function MenuChild() {
   const deleteItem = async (category: string, name: string) => {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
-      if (!token) return Alert.alert("Error", "Warden not logged in.");
+      if (!token) {
+        Alert.alert("Not allowed", "Only wardens can modify the menu.");
+        return;
+      }
       const headers = { Authorization: `Bearer ${token}` };
       const date = menu?.date || todayIST();
-      // const blockName = "Godavari"; // <- include if you use block-wise menus
 
-      // 1) Try DELETE with query params
+      // Try DELETE with query params; fallback to POST body
       try {
         await axios.delete(`${BASE_URL}/api/menu/item`, {
           headers,
-          params: { date, category, name /*, blockName*/ },
+          params: { date, category, name },
         });
-      } catch (err: any) {
-        // 2) Fallback: POST /removeItem with JSON body
+      } catch {
         await axios.post(
           `${BASE_URL}/api/menu/removeItem`,
-          { date, category, name /*, blockName*/ },
+          { date, category, name },
           { headers }
         );
       }
 
-      // Optimistic UI update
+      // Optimistic update
       setMenu((prev) => {
         if (!prev) return prev;
-        const items = (prev.items || []).filter(
-          (it) => !(it.category === category && it.name === name)
-        );
-        return { ...prev, items };
+        return {
+          ...prev,
+          items: (prev.items || []).filter(
+            (it) => !(it.category === category && it.name === name)
+          ),
+        };
       });
     } catch (e: any) {
       console.error(e?.response?.data || e.message);
@@ -112,50 +125,79 @@ export default function MenuChild() {
     }
   };
 
-  const grouped = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    (menu?.items || []).forEach((it) => {
-      if (!map[it.category]) map[it.category] = [];
-      map[it.category].push(it.name);
+  // Flatten list (sorted by category then name for stable render)
+  const flatItems = useMemo(() => {
+    const arr = [...(menu?.items || [])];
+    arr.sort((a, b) => {
+      if (a.category === b.category) return a.name.localeCompare(b.name);
+      return a.category.localeCompare(b.category);
     });
-    return Object.entries(map).map(([category, names]) => ({
-      category,
-      names,
-    }));
+    return arr;
   }, [menu]);
+
+  const renderItem = ({ item }: { item: MenuItem }) => {
+    const hasImg = !!item.imageUrl;
+    const uri =
+      hasImg && item.imageUrl?.startsWith("http")
+        ? item.imageUrl!
+        : hasImg
+        ? `${BASE_URL}${item.imageUrl}`
+        : null;
+
+    return (
+      <View style={styles.row}>
+        <View style={styles.thumbWrap}>
+          {uri ? (
+            <Image source={{ uri }} style={styles.thumb} />
+          ) : (
+            <View style={styles.thumbPlaceholder}>
+              <MaterialCommunityIcons
+                name="image-off"
+                size={20}
+                color="#9CA3AF"
+              />
+            </View>
+          )}
+        </View>
+
+        <View style={styles.meta}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <Text style={styles.secondary} numberOfLines={1}>
+            {item.category}
+          </Text>
+        </View>
+
+        {isWarden ? (
+          <TouchableOpacity
+            onPress={() => confirmDelete(item.category, item.name)}
+            style={styles.trailingBadge}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.trailingBadgeText}>×</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>
-        Today’s Menu ({menu?.items?.length || 0}) {loading ? "…" : ""}
+      <Text style={styles.header}>
+        Today’s Menu{" "}
+        <Text style={styles.headerCount}>({flatItems.length})</Text>
+        {loading ? " …" : ""}
       </Text>
 
       <FlatList
-        data={grouped}
-        keyExtractor={(i) => i.category}
-        contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.category}>{item.category}</Text>
-            <View style={styles.chips}>
-              {item.names.map((name, idx) => (
-                <View key={`${item.category}-${idx}`} style={styles.chip}>
-                  <Text style={styles.chipText}>{name}</Text>
-                  <TouchableOpacity
-                    onPress={() => confirmDelete(item.category, name)}
-                    style={styles.chipClose}
-                  >
-                    <Text style={styles.chipCloseText}>×</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
+        data={flatItems}
+        keyExtractor={(it, idx) => `${it.category}-${it.name}-${idx}`}
+        contentContainerStyle={styles.listPad}
+        renderItem={renderItem}
+        ItemSeparatorComponent={() => <View style={styles.sep} />}
         ListEmptyComponent={
-          <Text style={{ textAlign: "center", color: "#6B7280" }}>
-            No menu items for today.
-          </Text>
+          <Text style={styles.empty}>No menu items for today.</Text>
         }
         refreshing={loading}
         onRefresh={load}
@@ -166,34 +208,67 @@ export default function MenuChild() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F6F7FB" },
-  title: { fontSize: 20, fontWeight: "800", margin: 16, color: "#2D3436" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    elevation: 2,
+  header: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#111827",
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
   },
-  category: { fontWeight: "800", color: "#111827", marginBottom: 8 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
+  headerCount: { color: "#6B7280", fontWeight: "700" },
+  listPad: { paddingHorizontal: 14, paddingBottom: 28 },
+
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#F2994A",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 14, // bigger padding
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
-  chipText: { color: "#fff", fontWeight: "700" },
-  chipClose: {
-    marginLeft: 2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "rgba(255,255,255,0.25)",
+
+  thumbWrap: {
+    width: 60, // bigger image
+    height: 60,
+    borderRadius: 12,
+    overflow: "hidden",
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    marginRight: 14,
+  },
+  thumb: { width: "100%", height: "100%" },
+  thumbPlaceholder: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  chipCloseText: { color: "#fff", fontWeight: "900", lineHeight: 18 },
+
+  meta: { flex: 1 },
+  name: { fontSize: 16, fontWeight: "700", color: "#111827" }, // bigger font
+  secondary: { marginTop: 4, fontSize: 13, color: "#6B7280" },
+
+  trailingBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+  },
+  trailingBadgeText: {
+    fontSize: 18,
+    lineHeight: 18,
+    color: "#6B7280",
+    fontWeight: "900",
+  },
+
+  sep: { height: 12 },
+  empty: { textAlign: "center", color: "#6B7280", marginTop: 28, fontSize: 15 },
 });

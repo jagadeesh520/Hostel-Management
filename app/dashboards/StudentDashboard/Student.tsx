@@ -1,16 +1,19 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
   Image,
+  Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface Student {
   _id: string;
@@ -42,17 +45,15 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [student, setStudent] = useState<Student | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+
+  const insets = useSafeAreaInsets();
+  const FOOTER_BAR_HEIGHT = 64; // visual height of footer bar (without inset)
+  const footerTotalHeight = FOOTER_BAR_HEIGHT + insets.bottom;
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        onPress: () => {
-          router.replace("/(tabs)/Admin/admin-login");
-        },
-      },
-    ]);
+    setLogoutModalVisible(false);
+    router.replace("/(tabs)/Admin/admin-login" as any);
   };
 
   useEffect(() => {
@@ -100,17 +101,11 @@ export default function StudentDashboard() {
       title: "Time Sheet",
       icon: "calendar",
       color: "#4cafef",
-      onPress: () => router.push("/dashboards/StudentDashboard/TimesheetScreen"),
+      onPress: () =>
+        router.push("/dashboards/StudentDashboard/TimesheetScreen"),
     },
     {
       id: "2",
-      title: "Raise Ticket",
-      icon: "chat-processing",
-      color: "#ff8a65",
-      onPress: () => router.push("/dashboards/StudentDashboard/RaiseTicket"),
-    },
-    {
-      id: "3",
       title: "Self Check-In",
       icon: "camera",
       color: "#4db6ac",
@@ -122,6 +117,13 @@ export default function StudentDashboard() {
         await AsyncStorage.setItem("currentStudent", JSON.stringify(student));
         router.push("/dashboards/StudentDashboard/AttendanceScanner");
       },
+    },
+    {
+      id: "3",
+      title: "Raise Ticket",
+      icon: "chat-processing",
+      color: "#ff8a65",
+      onPress: () => router.push("/dashboards/StudentDashboard/RaiseTicket"),
     },
     {
       id: "4",
@@ -139,10 +141,24 @@ export default function StudentDashboard() {
     },
     {
       id: "6",
+      title: "Today's Menu",
+      icon: "silverware-fork-knife",
+      color: "#81c784",
+      onPress: () => router.push("/dashboards/WardenDashboard/MenuChild"),
+    },
+    {
+      id: "7",
+      title: "Events",
+      icon: "account-group",
+      color: "#81c784",
+      onPress: () => router.push("/dashboards/StudentDashboard/Events"),
+    },
+    {
+      id: "8",
       title: "Logout",
       icon: "logout",
       color: "#f44336",
-      onPress: handleLogout,
+      onPress: () => setLogoutModalVisible(true),
     },
   ];
 
@@ -178,9 +194,10 @@ export default function StudentDashboard() {
             <Text style={styles.subText}>Roll No: {student?.rollNo}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={handleLogout}>
+        <TouchableOpacity>
           <Ionicons name="notifications-outline" size={26} color="#fff" />
         </TouchableOpacity>
+        
       </View>
 
       {/* Stats Section */}
@@ -198,6 +215,41 @@ export default function StudentDashboard() {
           showsHorizontalScrollIndicator={false}
         />
       </View>
+      {/* Logout Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={logoutModalVisible}
+        onRequestClose={() => setLogoutModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { paddingBottom: Math.max(20, insets.bottom) },
+            ]}
+          >
+            <Text style={styles.modalTitle}>Confirm Logout</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to logout?
+            </Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setLogoutModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.modalButton, styles.logoutButtonModal]}
+                onPress={handleLogout}
+              >
+                <Text style={styles.logoutButtonTextModal}>Logout</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 
@@ -326,5 +378,61 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     color: "#555",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 25,
+    width: "80%",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#2c3e50",
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#7f8c8d",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalButton: {
+    borderRadius: 10,
+    padding: 12,
+    elevation: 2,
+    minWidth: "45%",
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f1f2f6",
+  },
+  logoutButtonModal: {
+    backgroundColor: "#FF3B30",
+  },
+  cancelButtonText: {
+    color: "#2c3e50",
+    fontWeight: "bold",
+  },
+  logoutButtonTextModal: {
+    color: "white",
+    fontWeight: "bold",
   },
 });

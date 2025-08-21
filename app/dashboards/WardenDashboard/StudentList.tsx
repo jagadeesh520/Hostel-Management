@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Alert,
+  Animated,
+  Easing,
   FlatList,
   StyleSheet,
   Text,
@@ -26,17 +27,59 @@ type AttendanceMap = {
   };
 };
 
+type BannerType = "success" | "info" | "error" | null;
+
 export const StudentList = ({ blockName }: { blockName: string }) => {
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceMap>({});
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
+  // Inline banner state (replaces Alert.alert)
+  const [bannerType, setBannerType] = useState<BannerType>(null);
+  const [bannerTitle, setBannerTitle] = useState<string>("");
+  const [bannerSubtitle, setBannerSubtitle] = useState<string>("");
+  const bannerY = useRef(new Animated.Value(-80)).current;
+  const bannerOpacity = useRef(new Animated.Value(0)).current;
+  const autoHideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showBanner = (type: BannerType, title: string, subtitle?: string, autoHide = true) => {
+    setBannerType(type);
+    setBannerTitle(title);
+    setBannerSubtitle(subtitle || "");
+
+    // clear any previous auto-hide
+    if (autoHideTimer.current) {
+      clearTimeout(autoHideTimer.current);
+      autoHideTimer.current = null;
+    }
+
+    Animated.parallel([
+      Animated.timing(bannerY, { toValue: 0, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(bannerOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start(() => {
+      if (autoHide) {
+        autoHideTimer.current = setTimeout(hideBanner, 1600);
+      }
+    });
+  };
+
+  const hideBanner = () => {
+    Animated.parallel([
+      Animated.timing(bannerY, { toValue: -80, duration: 200, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(bannerOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
+
   useEffect(() => {
     if (blockName) {
       fetchStudents();
       fetchTodayAttendance();
     }
+    // cleanup timer
+    return () => {
+      if (autoHideTimer.current) clearTimeout(autoHideTimer.current);
+    };
   }, [blockName]);
 
   const fetchStudents = async () => {
@@ -51,7 +94,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       setStudents(res.data);
     } catch (err) {
       console.error("Failed to fetch students:", err);
-      Alert.alert("Error", "Could not fetch students");
+      showBanner("error", "Failed to fetch students", "Please try again.");
     }
   };
 
@@ -70,12 +113,10 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       );
 
       const attendanceData: AttendanceMap = {};
-
       res.data.forEach((record: any) => {
         const id = record.studentId?._id || record.studentId;
         const status = record.status?.toLowerCase?.();
-        const timestamp =
-          record.timestamp || record.updatedAt || record.createdAt;
+        const timestamp = record.timestamp || record.updatedAt || record.createdAt;
 
         if (status) {
           attendanceData[id] = {
@@ -88,37 +129,20 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       setAttendance(attendanceData);
     } catch (err) {
       console.error("❌ Failed to fetch attendance:", err);
+      showBanner("error", "Failed to fetch attendance", "Please pull to refresh.");
     }
   };
 
-  const markAttendance = async (
-    student: Student,
-    status: "Present" | "Absent"
-  ) => {
+  // Mark attendance WITHOUT using Alert for confirm. If you still want confirm,
+  // we can add an inline confirm bar later—this version just updates.
+  const markAttendance = async (student: Student, status: "Present" | "Absent") => {
     const currentStatus = attendance[student._id]?.status;
-
     if (currentStatus === status) return;
 
-    const proceed = () => actuallyMarkAttendance(student, status);
-
-    if (currentStatus) {
-      Alert.alert(
-        "Update Attendance",
-        `Already marked as "${currentStatus}". Update to "${status}"?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Update", onPress: proceed },
-        ]
-      );
-    } else {
-      proceed();
-    }
+    await actuallyMarkAttendance(student, status);
   };
 
-  const actuallyMarkAttendance = async (
-    student: Student,
-    status: "Present" | "Absent"
-  ) => {
+  const actuallyMarkAttendance = async (student: Student, status: "Present" | "Absent") => {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       const date = new Date().toISOString().split("T")[0];
@@ -147,12 +171,20 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
           timestamp: new Date().toISOString(),
         },
       }));
+
+      // Success banner (no modal alert)
+      showBanner(
+        "success",
+        "Attendance Updated",
+        `${student.studentName} is ${status}.`
+      );
     } catch (err) {
       console.error("❌ Failed to mark attendance:", err);
-      Alert.alert("Error", "Could not mark attendance");
+      showBanner("error", "Could not mark attendance", "Please try again.");
     }
   };
 
+  // Called when scanner returns success
   const handleFaceMatchSuccess = () => {
     if (selectedStudent) {
       markAttendance(selectedStudent, "Present");
@@ -160,20 +192,60 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
     }
   };
 
+  // Colors for banner
+  const bannerBg = useMemo(() => {
+    if (bannerType === "success") return "#1ABC9C";
+    if (bannerType === "info") return "#2980B9";
+    if (bannerType === "error") return "#C0392B";
+    return "transparent";
+  }, [bannerType]);
+
+  const bannerIcon = useMemo(() => {
+    if (bannerType === "success") return "✔";
+    if (bannerType === "info") return "ℹ";
+    if (bannerType === "error") return "✖";
+    return "";
+  }, [bannerType]);
+
   return (
     <View style={styles.container}>
+      {/* Inline top banner */}
+      {bannerType && (
+        <Animated.View
+          style={[
+            styles.banner,
+            { backgroundColor: bannerBg, opacity: bannerOpacity, transform: [{ translateY: bannerY }] },
+          ]}
+        >
+          <View style={styles.bannerRow}>
+            <View style={styles.bannerIconCircle}>
+              <Text style={styles.bannerIcon}>{bannerIcon}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bannerTitle}>{bannerTitle}</Text>
+              {!!bannerSubtitle && <Text style={styles.bannerSubtitle}>{bannerSubtitle}</Text>}
+            </View>
+            <TouchableOpacity onPress={hideBanner} style={styles.bannerClose}>
+              <Text style={styles.bannerCloseText}>×</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
       <Text style={styles.title}>Attendance for {blockName}</Text>
 
       <View style={[styles.row, styles.header]}>
         <Text style={styles.headerText}>Name</Text>
         <Text style={styles.headerText}>Room No</Text>
         <Text style={styles.headerText}>P/A</Text>
-       <Text style={styles.headerText}>Status</Text>
+        <Text style={styles.headerText}>Status</Text>
       </View>
 
       <FlatList
         data={students}
         keyExtractor={(item) => item._id}
+        onRefresh={fetchTodayAttendance}
+        refreshing={false}
         renderItem={({ item }) => {
           const record = attendance[item._id];
           const status = record?.status;
@@ -188,13 +260,12 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
             <View style={styles.row}>
               <Text style={styles.cell}>{item.studentName}</Text>
               <Text style={styles.cell}>{item.roomNo}</Text>
+
               <View style={styles.buttonGroup}>
                 <TouchableOpacity
                   style={[
                     styles.btn,
-                    status === "Present"
-                      ? styles.selectedPresent
-                      : styles.neutralBtn,
+                    status === "Present" ? styles.selectedPresent : styles.neutralBtn,
                   ]}
                   onPress={() => {
                     setSelectedStudent(item);
@@ -204,9 +275,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
                   <Text
                     style={[
                       styles.btnText,
-                      status === "Present"
-                        ? { color: "#fff" }
-                        : { color: "#2c3e50" },
+                      status === "Present" ? { color: "#fff" } : { color: "#2c3e50" },
                     ]}
                   >
                     P
@@ -216,18 +285,14 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
                 <TouchableOpacity
                   style={[
                     styles.btn,
-                    status === "Absent"
-                      ? styles.selectedAbsent
-                      : styles.neutralBtn,
+                    status === "Absent" ? styles.selectedAbsent : styles.neutralBtn,
                   ]}
                   onPress={() => markAttendance(item, "Absent")}
                 >
                   <Text
                     style={[
                       styles.btnText,
-                      status === "Absent"
-                        ? { color: "#fff" }
-                        : { color: "#2c3e50" },
+                      status === "Absent" ? { color: "#fff" } : { color: "#2c3e50" },
                     ]}
                   >
                     A
@@ -249,6 +314,16 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
           student={selectedStudent}
           onClose={() => setModalVisible(false)}
           onMatchSuccess={handleFaceMatchSuccess}
+          onResult={(r) => {
+            // Mirror scanner’s message in list (no Alert)
+            if (r.type === "success" || r.type === "already") {
+              showBanner("success", r.title, r.subtitle);
+            } else if (r.type === "mismatch" || r.type === "notfound") {
+              showBanner("info", r.title, r.subtitle);
+            } else if (r.type === "network" || r.type === "error") {
+              showBanner("error", r.title, r.subtitle);
+            }
+          }}
         />
       )}
     </View>
@@ -256,7 +331,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { padding: 10 },
+  container: { padding: 10, flex: 1 },
   title: {
     fontSize: 16,
     fontWeight: "bold",
@@ -264,6 +339,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#2c3e50",
   },
+
+  // Header / rows
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -324,5 +401,60 @@ const styles = StyleSheet.create({
   },
   selectedAbsent: {
     backgroundColor: "#922b21",
+  },
+
+  // Top slide-in banner
+  banner: {
+    position: "absolute",
+    top: 8,
+    left: 10,
+    right: 10,
+    zIndex: 5,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  bannerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  bannerIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  bannerIcon: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  bannerTitle: {
+    color: "white",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  bannerSubtitle: {
+    color: "white",
+    fontSize: 12,
+    opacity: 0.95,
+  },
+  bannerClose: {
+    marginLeft: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  bannerCloseText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 18,
   },
 });

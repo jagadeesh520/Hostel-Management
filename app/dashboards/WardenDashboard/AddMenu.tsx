@@ -1,9 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
-import React, { useMemo, useState } from "react";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { useMemo, useState } from "react";
 import {
   Alert,
+  Image,
+  Platform,
   SafeAreaView,
   StyleSheet,
   Text,
@@ -13,18 +17,64 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
-type MenuItem = { name: string; category: string };
+type MenuItem = { name: string; category: string; imageUri?: string | null };
 
-const CATEGORIES = [
-  "Veg",
-  "NonVeg",
-];
-
+const CATEGORIES = ["Veg", "NonVeg"];
 const BASE_URL = "http://192.168.29.83:5000";
+
+/** ---------- helpers ---------- */
+
+const guessMime = (ext: string) => {
+  const e = ext.toLowerCase();
+  if (e === "png") return "image/png";
+  if (e === "webp") return "image/webp";
+  return "image/jpeg";
+};
+
+// Ensure we have a streamable file:// URI. For content://, try to copy into cache.
+async function ensureFileUri(inputUri: string | null | undefined) {
+  try {
+    if (!inputUri) return null;
+    if (inputUri.startsWith("file://")) return inputUri;
+
+    // Try to copy to cache with a safe extension
+    const extFromName = (() => {
+      const tail = inputUri.split("?")[0].split("#")[0];
+      const dot = tail.lastIndexOf(".");
+      const ext = dot >= 0 ? tail.slice(dot + 1) : "";
+      return ext && ext.length <= 5 ? ext : "jpg";
+    })();
+
+    const dest = FileSystem.cacheDirectory + `menu_${Date.now()}.${extFromName}`;
+    try {
+      await FileSystem.copyAsync({ from: inputUri, to: dest });
+      return dest;
+    } catch {
+      // Fallback: if copy fails (some content:// sources), try getInfo; if it exists, use original
+      const info = await FileSystem.getInfoAsync(inputUri);
+      if (info.exists) return inputUri;
+      return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+async function probeServer(baseUrl: string) {
+  try {
+    await axios.get(`${baseUrl}/api/menu?date=1970-01-01`, { timeout: 4000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** ---------- component ---------- */
 
 export default function AddMenu() {
   const [itemName, setItemName] = useState("");
-  const [category, setCategory] = useState("Rice");
+  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [imageUri, setImageUri] = useState<string | null>(null);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -38,11 +88,36 @@ export default function AddMenu() {
     return `${y}-${m}-${d}`;
   };
 
+  const pickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission required", "Please allow photo library access.");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri);
+      }
+    } catch (err: any) {
+      console.log("Image picker error:", err?.message || err);
+      Alert.alert("Error", "Could not open image library.");
+    }
+  };
+
   const addItem = () => {
     const name = itemName.trim();
-    if (!name) return;
-    setItems((prev) => [...prev, { name, category }]);
+    if (!name) {
+      Alert.alert("Item name required");
+      return;
+    }
+    setItems((prev) => [...prev, { name, category, imageUri: imageUri ?? null }]);
     setItemName("");
+    setImageUri(null);
   };
 
   const removeItem = (idx: number) => {
@@ -50,10 +125,10 @@ export default function AddMenu() {
   };
 
   const grouped = useMemo(() => {
-    const map: Record<string, string[]> = {};
+    const map: Record<string, MenuItem[]> = {};
     for (const it of items) {
       if (!map[it.category]) map[it.category] = [];
-      map[it.category].push(it.name);
+      map[it.category].push(it);
     }
     return map;
   }, [items]);
@@ -63,24 +138,85 @@ export default function AddMenu() {
       Alert.alert("Add at least one item");
       return;
     }
+
     try {
       setSaving(true);
+
+      // 0) Reachability probe (clear, early failure if LAN/bind issue)
+      const reachable = await probeServer(BASE_URL);
+      if (!reachable) {
+        Alert.alert(
+          "Cannot reach server",
+          "Ensure phone & server are on the same Wi‑Fi and server listens on 0.0.0.0. Try opening the URL on your phone’s browser."
+        );
+        return;
+      }
+
       const token = await AsyncStorage.getItem("wardenToken");
-      if (!token) return Alert.alert("Error", "Warden not logged in.");
-      const headers = { Authorization: `Bearer ${token}` };
+      if (!token) {
+        Alert.alert("Error", "Warden not logged in.");
+        return;
+      }
 
-      const payload = {
-        date: todayIST(),
-        // blockName: "Godavari", // OPTIONAL if you want block-wise menus
-        items,
-      };
+      // 1) Prepare images in the SAME order as items to compute stable imageIndex per item.
+      const imageFiles: { uri: string; name: string; type: string }[] = [];
+      const imageIndexPerItem: (number | null)[] = new Array(items.length).fill(null);
 
-      await axios.post(`${BASE_URL}/api/menu`, payload, { headers });
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        if (it.imageUri) {
+          const ensured = await ensureFileUri(it.imageUri);
+          if (ensured) {
+            const ext =
+              ensured.split(".").pop()?.toLowerCase() ||
+              (Platform.OS === "ios" ? "jpg" : "jpeg");
+            const name = `item_${imageFiles.length}.${ext}`;
+            const type = guessMime(ext);
+            imageIndexPerItem[i] = imageFiles.length;
+            imageFiles.push({ uri: ensured, name, type });
+          } else {
+            imageIndexPerItem[i] = null;
+          }
+        }
+      }
+
+      // 2) Build form data
+      const form = new FormData();
+      const itemsWithImageIndex = items.map((it, i) => ({
+        name: it.name,
+        category: it.category,
+        imageIndex: imageIndexPerItem[i],
+      }));
+
+      form.append("date", todayIST());
+      form.append("items", JSON.stringify(itemsWithImageIndex));
+      imageFiles.forEach((f) => {
+        // @ts-ignore RN FormData file shape
+        form.append("images", { uri: f.uri, name: f.name, type: f.type });
+      });
+
+      // 3) Send (explicit multipart header + RN-safe transform)
+      await axios.post(`${BASE_URL}/api/menu`, form, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 20000,
+        transformRequest: (data) => data, // don't let axios stringify FormData in RN
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      });
+
       Alert.alert("Success", "Today's menu saved.");
       setItems([]);
+      setItemName("");
+      setImageUri(null);
     } catch (e: any) {
-      console.error(e?.response?.data || e.message);
-      Alert.alert("Error", e?.response?.data?.message || "Failed to save menu");
+      console.log("Upload error:", e?.message, e?.response?.data || "");
+      Alert.alert(
+        "Failed to save menu",
+        e?.response?.data?.message || e?.message || "Unknown error"
+      );
     } finally {
       setSaving(false);
     }
@@ -90,6 +226,7 @@ export default function AddMenu() {
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>Add Today’s Menu</Text>
 
+      {/* Category */}
       <View style={styles.row}>
         <View style={styles.inputWrap}>
           <Text style={styles.label}>Category</Text>
@@ -120,6 +257,22 @@ export default function AddMenu() {
         </View>
       </View>
 
+      {/* Image picker */}
+      <View style={styles.row}>
+        <TouchableOpacity style={styles.pickBtn} onPress={pickImage}>
+          <MaterialCommunityIcons name="image-plus" size={18} color="#fff" />
+          <Text style={styles.pickBtnText}>
+            {imageUri ? "Change Image" : "Pick Image (optional)"}
+          </Text>
+        </TouchableOpacity>
+
+        {imageUri ? (
+          <View style={styles.thumbWrap}>
+            <Image source={{ uri: imageUri }} style={styles.thumb} />
+          </View>
+        ) : null}
+      </View>
+
       <TouchableOpacity style={styles.addBtn} onPress={addItem}>
         <MaterialCommunityIcons name="plus" size={18} color="#fff" />
         <Text style={styles.addBtnText}>Add Item</Text>
@@ -131,22 +284,36 @@ export default function AddMenu() {
         {Object.keys(grouped).length === 0 && (
           <Text style={{ color: "#6B7280" }}>No items added yet</Text>
         )}
-        {Object.entries(grouped).map(([cat, names]) => (
+
+        {Object.entries(grouped).map(([cat, list]) => (
           <View key={cat} style={styles.group}>
             <Text style={styles.groupTitle}>{cat}</Text>
             <View style={styles.chips}>
-              {names.map((n, idx) => (
-                <View key={`${cat}-${n}-${idx}`} style={styles.chip}>
-                  <Text style={styles.chipText}>{n}</Text>
-                  <TouchableOpacity onPress={() => {
-                    // remove only this occurrence
-                    const indexInItems = items.findIndex(it => it.name === n && it.category === cat);
-                    if (indexInItems > -1) removeItem(indexInItems);
-                  }}>
-                    <MaterialCommunityIcons name="close" size={14} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              ))}
+              {list.map((it, idx) => {
+                const indexInItems = items.findIndex(
+                  (x) =>
+                    x.name === it.name &&
+                    x.category === it.category &&
+                    x.imageUri === it.imageUri
+                );
+                return (
+                  <View key={`${cat}-${it.name}-${idx}`} style={styles.chip}>
+                    {it.imageUri ? (
+                      <Image source={{ uri: it.imageUri }} style={styles.chipImg} />
+                    ) : (
+                      <View style={styles.chipImgPlaceholder}>
+                        <MaterialCommunityIcons name="image-off" size={14} color="#fff" />
+                      </View>
+                    )}
+                    <Text style={styles.chipText}>{it.name}</Text>
+                    <TouchableOpacity
+                      onPress={() => indexInItems > -1 && removeItem(indexInItems)}
+                    >
+                      <MaterialCommunityIcons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>
           </View>
         ))}
@@ -158,17 +325,21 @@ export default function AddMenu() {
         disabled={saving}
       >
         <MaterialCommunityIcons name="content-save" size={18} color="#fff" />
-        <Text style={styles.saveBtnText}>{saving ? "Saving..." : "Save Today’s Menu"}</Text>
+        <Text style={styles.saveBtnText}>
+          {saving ? "Saving..." : "Save Today’s Menu"}
+        </Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
 
+/** ---------- styles ---------- */
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F6F7FB", padding: 16 },
   header: { fontSize: 20, fontWeight: "800", color: "#111827", marginBottom: 12 },
 
-  row: { flexDirection: "row", gap: 12, marginBottom: 10 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10 },
   inputWrap: { flex: 1 },
   label: { color: "#374151", marginBottom: 6, fontWeight: "600" },
   input: {
@@ -186,6 +357,28 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
     overflow: "hidden",
   },
+
+  pickBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#6D28D9",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
+  pickBtnText: { color: "#fff", fontWeight: "700" },
+
+  thumbWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#fff",
+  },
+  thumb: { width: "100%", height: "100%" },
 
   addBtn: {
     flexDirection: "row",
@@ -210,6 +403,7 @@ const styles = StyleSheet.create({
   group: { marginBottom: 8 },
   groupTitle: { fontWeight: "700", color: "#1F2937", marginBottom: 6 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+
   chip: {
     flexDirection: "row",
     alignItems: "center",
@@ -218,6 +412,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
+  },
+  chipImg: { width: 20, height: 20, borderRadius: 999 },
+  chipImgPlaceholder: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.5)",
   },
   chipText: { color: "#fff", fontWeight: "700" },
 
