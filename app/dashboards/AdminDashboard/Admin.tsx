@@ -1,119 +1,180 @@
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ReactNode, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// Define types for our menu items
+type MenuItemWithRoute = {
+  label: string;
+  icon: string | ReactNode;
+  color: string;
+  route: string;
+};
+
+type MenuItemWithAction = {
+  label: string;
+  icon: string | ReactNode;
+  color: string;
+  action: () => void;
+};
+
+type MenuItem = MenuItemWithRoute | MenuItemWithAction;
+
+// Define valid route types (kept for clarity; fallback allows any string)
+type ValidRoute =
+  | "/dashboards/AdminDashboard/create-hostel"
+  | "/dashboards/AdminDashboard/manage-wardens"
+  | "/dashboards/AdminDashboard/upload-students"
+  | "/dashboards/AdminDashboard/view-students"
+  | "/dashboards/AdminDashboard/reports"
+  | "/dashboards/AdminDashboard/addDailyRates"
+  | "/dashboards/AdminDashboard/campusLocationForm"
+  | "/dashboards/AdminDashboard/BulkUploadStudents"
+  | "/dashboards/AdminDashboard/AttendanceDashboard"
+  | string; // Allow any string as fallback
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+
+  // Safe area handling
+  const insets = useSafeAreaInsets();
+  const FOOTER_BAR_HEIGHT = 64; // visual height of footer bar (without inset)
+  const footerTotalHeight = FOOTER_BAR_HEIGHT + insets.bottom;
 
   const handleLogout = () => {
-    Alert.alert("Logout", "Are you sure you want to logout?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Logout",
-        onPress: () => {
-          router.replace("/(tabs)/Admin/admin-login");
-        },
-      },
-    ]);
+    setLogoutModalVisible(false);
+    router.replace("/(tabs)/Admin/admin-login" as any);
   };
 
-  const menuItems = [
-    {
-      label: "Create Hostel",
-      icon: "🏠",
-      color: "#FFD700",
-      route: "/dashboards/AdminDashboard/create-hostel",
-    },
-    {
-      label: "Manage Wardens",
-      icon: "👮",
-      color: "#90EE90",
-      route: "/dashboards/AdminDashboard/manage-wardens",
-    },
-    {
-      label: "Upload Students",
-      icon: "📤",
-      color: "#ADD8E6",
-      route: "/dashboards/AdminDashboard/upload-students",
-    },
-    {
-      label: "View Students",
-      icon: "📄",
-      color: "#FFB6C1",
-      route: "/dashboards/AdminDashboard/view-students",
-    },
+  const menuItems: MenuItem[] = [
+    { label: "Create Hostel", icon: "🏠", color: "#FF9E44", route: "/dashboards/AdminDashboard/create-hostel" },
+    { label: "Manage Wardens", icon: "👮", color: "#4CD964", route: "/dashboards/AdminDashboard/manage-wardens" },
+    { label: "Upload Students", icon: "📤", color: "#5AC8FA", route: "/dashboards/AdminDashboard/upload-students" },
+    { label: "View Students", icon: "📄", color: "#FF2D55", route: "/dashboards/AdminDashboard/view-students" },
     {
       label: "Issues",
-      icon: (
-        <FontAwesome5 name="exclamation-triangle" size={24} color="white" />
-      ), // Updated icon
-      color: "#dc3545", // Red (represents errors/issues)
+      icon: <FontAwesome5 name="exclamation-triangle" size={20} color="white" />,
+      color: "#FF3B30",
       route: "/dashboards/AdminDashboard/reports",
     },
     {
       label: "Daily Rates",
-      icon: <FontAwesome5 name="rupee-sign" size={24} color="white" />,
-      color: "#20B2AA", // LightSeaGreen
+      icon: <FontAwesome5 name="rupee-sign" size={20} color="white" />,
+      color: "#34C759",
       route: "/dashboards/AdminDashboard/addDailyRates",
     },
     {
       label: "Location",
-      icon: <FontAwesome5 name="map-marked-alt" size={24} color="white" />,
-      color: "#FFA500", // Orange
+      icon: <FontAwesome5 name="map-marked-alt" size={20} color="white" />,
+      color: "#FF9500",
       route: "/dashboards/AdminDashboard/campusLocationForm",
     },
     {
       label: "Upload Logins",
-      icon: <FontAwesome5 name="user-circle" size={24} color="white" />, // changed icon
-      color: "#1E90FF", // Orange
+      icon: <FontAwesome5 name="user-circle" size={20} color="white" />,
+      color: "#007AFF",
       route: "/dashboards/AdminDashboard/BulkUploadStudents",
     },
-    {
-      label: "Reports",
-      icon: "📊",
-      color: "#BA55D3", // Purple
-      route: "/dashboards/AdminDashboard/AttendanceDashboard",
-    },
-    {
-      label: "Logout",
-      icon: "🔓", // You can use 🔓 or ❌ or 🔚 too
-      color: "#FF6347", // Tomato red
-      action: handleLogout, // No route, use action instead
-    },
-  ] as const;
+    { label: "Reports", icon: "📊", color: "#AF52DE", route: "/dashboards/AdminDashboard/AttendanceDashboard" },
+  ];
+
+  const handleNavigation = (item: MenuItem) => {
+    if ("route" in item) {
+      router.push(item.route as any);
+    } else if ("action" in item) {
+      item.action();
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>JNTUACEP</Text>
-      <Text style={styles.subHeader}>Hostel Management Dashboard</Text>
+      <View style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}>
+        <Text style={styles.headerTitle}>JNTUACEP</Text>
+        <Text style={styles.headerSubtitle}>Hostel Management Dashboard</Text>
+      </View>
 
-      <View style={styles.gridContainer}>
+      <ScrollView
+        style={[styles.scrollView, { marginBottom: footerTotalHeight + 8 }]} // leave space for footer + bottom inset
+        contentContainerStyle={styles.scrollViewContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.grid}>
           {menuItems.map((item, index) => (
             <TouchableOpacity
               key={index}
               style={styles.menuItem}
-              onPress={() => {
-                if ("route" in item) {
-                  router.push(item.route);
-                } else if (
-                  "action" in item &&
-                  typeof item.action === "function"
-                ) {
-                  item.action();
-                }
-              }}
+              onPress={() => handleNavigation(item)}
+              activeOpacity={0.7}
             >
-              <View
-                style={[styles.iconCircle, { backgroundColor: item.color }]}
-              >
-                <Text style={styles.iconText}>{item.icon}</Text>
+              <View style={styles.menuItemContent}>
+                <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
+                  {typeof item.icon === "string" ? (
+                    <Text style={styles.iconText}>{item.icon}</Text>
+                  ) : (
+                    item.icon
+                  )}
+                </View>
+                <Text style={styles.label}>{item.label}</Text>
               </View>
-              <Text style={styles.label}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
+      </ScrollView>
+
+      {/* Fixed Footer */}
+      <View
+        style={[
+          styles.fixedFooter,
+          { height: footerTotalHeight, paddingBottom: insets.bottom }, // lift above nav bar
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => setLogoutModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.logoutButtonContent}>
+            <FontAwesome5 name="sign-out-alt" size={20} color="white" />
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </View>
+        </TouchableOpacity>
       </View>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        animationType="fade"
+        transparent
+        visible={logoutModalVisible}
+        onRequestClose={() => setLogoutModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: Math.max(20, insets.bottom) }]}>
+            <Text style={styles.modalTitle}>Confirm Logout</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            <View style={styles.modalButtons}>
+              <Pressable
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => setLogoutModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={[styles.modalButton, styles.logoutButtonModal]} onPress={handleLogout}>
+                <Text style={styles.logoutButtonTextModal}>Logout</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -121,38 +182,62 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f2f2f2",
-    paddingTop: 60,
-    paddingHorizontal: 20,
+    backgroundColor: "#F8F9FA",
   },
   header: {
+    backgroundColor: "#667eea",
+    // paddingTop set dynamically via insets
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  headerTitle: {
     fontSize: 28,
-    fontWeight: "bold",
-    color: "#2c3e50",
+    fontWeight: "800",
+    color: "white",
     textAlign: "center",
+    marginBottom: 5,
+    textShadowColor: "rgba(0, 0, 0, 0.2)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  subHeader: {
+  headerSubtitle: {
     fontSize: 16,
-    color: "#7f8c8d",
+    color: "rgba(255, 255, 255, 0.9)",
     textAlign: "center",
-    marginBottom: 30,
   },
-  gridContainer: {
+  scrollView: {
     flex: 1,
-    justifyContent: "flex-start",
-    alignItems: "center",
-    paddingTop: 10,
+  },
+  scrollViewContent: {
+    padding: 15,
+    paddingTop: 25,
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 10,
+    justifyContent: "space-between",
   },
   menuItem: {
     width: "30%",
+    marginBottom: 20,
+    borderRadius: 16,
+    backgroundColor: "white",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  menuItemContent: {
     alignItems: "center",
-    marginBottom: 30,
+    padding: 15,
   },
   iconCircle: {
     width: 60,
@@ -160,26 +245,110 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
   },
   iconText: {
-    fontSize: 26,
+    fontSize: 24,
   },
   label: {
     fontSize: 12,
+    fontWeight: "600",
     textAlign: "center",
-    color: "#333",
+    color: "#2c3e50",
+  },
+  fixedFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "white",
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
   },
   logoutButton: {
-    marginTop: 40,
-    backgroundColor: "#e74c3c",
-    borderRadius: 12,
-    paddingVertical: 15,
+    backgroundColor: "#FF3B30",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  logoutButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoutButtonText: {
+    color: "white",
+    fontWeight: "bold",
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 25,
+    width: "80%",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 10,
+    color: "#2c3e50",
+  },
+  modalMessage: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#7f8c8d",
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  modalButton: {
+    borderRadius: 10,
+    padding: 12,
+    elevation: 2,
+    minWidth: "45%",
     alignItems: "center",
   },
-  logoutText: {
-    color: "#fff",
-    fontSize: 16,
+  cancelButton: {
+    backgroundColor: "#f1f2f6",
+  },
+  logoutButtonModal: {
+    backgroundColor: "#FF3B30",
+  },
+  cancelButtonText: {
+    color: "#2c3e50",
+    fontWeight: "bold",
+  },
+  logoutButtonTextModal: {
+    color: "white",
     fontWeight: "bold",
   },
 });
