@@ -1,6 +1,8 @@
 import { FontAwesome5 } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { ReactNode, useState } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -11,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
 // Define types for our menu items
 type MenuItemWithRoute = {
@@ -42,6 +45,38 @@ type ValidRoute =
   | "/dashboards/AdminDashboard/AttendanceDashboard"
   | string; // Allow any string as fallback
 
+// --- Reusable in-file hook to show a one-time toast on focus ---
+function useFlashToastOnFocus(
+  flagKey: string,
+  opts: { type?: "success" | "error" | "warning" | "info"; text1?: string; text2?: string; delayMs?: number } = {}
+) {
+  const { type = "success", text1 = "Success!", text2, delayMs = 50 } = opts;
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+
+      (async () => {
+        try {
+          const flag = await AsyncStorage.getItem(flagKey);
+          if (alive && flag === "1") {
+            await AsyncStorage.removeItem(flagKey);
+            setTimeout(() => {
+              Toast.show({ type, text1, ...(text2 ? { text2 } : {}) });
+            }, delayMs);
+          }
+        } catch {
+          // no-op
+        }
+      })();
+
+      return () => {
+        alive = false;
+      };
+    }, [flagKey, type, text1, text2, delayMs])
+  );
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
@@ -55,6 +90,9 @@ export default function AdminDashboard() {
     setLogoutModalVisible(false);
     router.replace("/(tabs)/Admin/admin-login" as any);
   };
+
+  // ✅ Show success toast once when arriving after login
+  useFlashToastOnFocus("flash:justLoggedIn", { type: "success", text1: "Login successful 🎉" });
 
   const menuItems: MenuItem[] = [
     {
@@ -83,9 +121,7 @@ export default function AdminDashboard() {
     },
     {
       label: "Issues",
-      icon: (
-        <FontAwesome5 name="exclamation-triangle" size={20} color="white" />
-      ),
+      icon: <FontAwesome5 name="exclamation-triangle" size={20} color="white" />,
       color: "#FF3B30", // red
       route: "/dashboards/AdminDashboard/reports",
     },
@@ -131,9 +167,7 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}
-      >
+      <View style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}>
         <Text style={styles.headerTitle}>JNTUACEP</Text>
         <Text style={styles.headerSubtitle}>Hostel Management Dashboard</Text>
       </View>
@@ -152,9 +186,7 @@ export default function AdminDashboard() {
               activeOpacity={0.7}
             >
               <View style={styles.menuItemContent}>
-                <View
-                  style={[styles.iconCircle, { backgroundColor: item.color }]}
-                >
+                <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
                   {typeof item.icon === "string" ? (
                     <Text style={styles.iconText}>{item.icon}</Text>
                   ) : (
@@ -169,12 +201,7 @@ export default function AdminDashboard() {
       </ScrollView>
 
       {/* Fixed Footer */}
-      <View
-        style={[
-          styles.fixedFooter,
-          { height: footerTotalHeight, paddingBottom: insets.bottom }, // lift above nav bar
-        ]}
-      >
+      <View style={[styles.fixedFooter, { height: footerTotalHeight, paddingBottom: insets.bottom }]}>
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={() => setLogoutModalVisible(true)}
@@ -195,16 +222,9 @@ export default function AdminDashboard() {
         onRequestClose={() => setLogoutModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { paddingBottom: Math.max(20, insets.bottom) },
-            ]}
-          >
+          <View style={[styles.modalContent, { paddingBottom: Math.max(20, insets.bottom) }]}>
             <Text style={styles.modalTitle}>Confirm Logout</Text>
-            <Text style={styles.modalMessage}>
-              Are you sure you want to logout?
-            </Text>
+            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.cancelButton]}
@@ -212,10 +232,7 @@ export default function AdminDashboard() {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.logoutButtonModal]}
-                onPress={handleLogout}
-              >
+              <Pressable style={[styles.modalButton, styles.logoutButtonModal]} onPress={handleLogout}>
                 <Text style={styles.logoutButtonTextModal}>Logout</Text>
               </Pressable>
             </View>
@@ -225,6 +242,7 @@ export default function AdminDashboard() {
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

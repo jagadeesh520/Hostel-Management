@@ -2,16 +2,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 type Warden = { _id: string; name: string; block: string };
@@ -53,6 +54,22 @@ export default function WardenDashboard() {
 
   useEffect(() => { fetchAll(); }, []);
   useFocusEffect(useCallback(() => { fetchAll(); }, []));
+
+  useFocusEffect(
+  useCallback(() => {
+    let alive = true;
+    (async () => {
+      const flag = await AsyncStorage.getItem("flash:wardenLoggedIn");
+      if (alive && flag === "1") {
+        await AsyncStorage.removeItem("flash:wardenLoggedIn");
+        setTimeout(() => {
+          Toast.show({ type: "success", text1: "Login successful 🎉" });
+        }, 50);
+      }
+    })();
+    return () => { alive = false; };
+  }, [])
+);
 
   const todayIST = () => {
     const now = new Date();

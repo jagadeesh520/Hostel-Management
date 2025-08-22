@@ -1,7 +1,8 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -14,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
 interface Student {
   _id: string;
@@ -55,6 +57,25 @@ export default function StudentDashboard() {
     setLogoutModalVisible(false);
     router.replace("/(tabs)/Admin/admin-login" as any);
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      (async () => {
+        const flag = await AsyncStorage.getItem("flash:studentLoggedIn");
+        if (alive && flag === "1") {
+          await AsyncStorage.removeItem("flash:studentLoggedIn");
+          // tiny delay ensures layout/header are ready
+          setTimeout(() => {
+            Toast.show({ type: "success", text1: "Login successful 🎉" });
+          }, 50);
+        }
+      })();
+      return () => {
+        alive = false;
+      };
+    }, [])
+  );
 
   useEffect(() => {
     const fetchStudent = async () => {
@@ -197,7 +218,6 @@ export default function StudentDashboard() {
         <TouchableOpacity>
           <Ionicons name="notifications-outline" size={26} color="#fff" />
         </TouchableOpacity>
-        
       </View>
 
       {/* Stats Section */}

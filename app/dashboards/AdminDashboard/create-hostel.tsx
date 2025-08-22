@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -147,8 +147,6 @@ const handleSaveToBackend = async () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Create Hostel</Text>
-
       <Text style={styles.label}>Select Hostel Type:</Text>
       <View style={styles.typeContainer}>
         {(["Boys", "Girls"] as HostelType[]).map((type) => (
@@ -270,7 +268,7 @@ const handleSaveToBackend = async () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingTop: 50,
+    paddingTop:5,
     backgroundColor: "#f9f9f9",
     flexGrow: 1,
   },
