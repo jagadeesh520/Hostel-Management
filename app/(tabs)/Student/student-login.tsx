@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -27,9 +28,13 @@ export default function StudentLogin() {
   const [focusedInput, setFocusedInput] = useState<"email" | "password" | null>(
     null
   );
+  const [forgotPasswordModalVisible, setForgotPasswordModalVisible] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
 
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
+  const resetEmailRef = useRef<TextInput>(null);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -70,7 +75,7 @@ export default function StudentLogin() {
       }
 
       if (response.ok) {
-        await AsyncStorage.setItem("studentToken", JSON.stringify(data.token)); // keep as your code
+        await AsyncStorage.setItem("studentToken", JSON.stringify(data.token));
         if (data?.student?.rollNo) {
           await AsyncStorage.setItem("rollNo", data.student.rollNo);
         }
@@ -99,6 +104,112 @@ export default function StudentLogin() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: "Please enter your email address",
+      });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail)) {
+      Toast.show({
+        type: "error",
+        text1: "Validation Error",
+        text2: "Please enter a valid email address",
+      });
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      
+      // Try student password reset first
+      let response = await fetch(
+        "http://192.168.29.83:5000/api/studentAuth/forgot-password",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Toast.show({
+          type: "success",
+          text1: "Password Sent",
+          text2: "Your password has been sent to your registered email address",
+        });
+        setForgotPasswordModalVisible(false);
+        setResetEmail("");
+      } else {
+        // If student reset fails, try admin
+        response = await fetch(
+          "http://192.168.29.83:5000/api/adminAuth/forgot-password",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
+          }
+        );
+        
+        const adminData = await response.json();
+        
+        if (response.ok) {
+          Toast.show({
+            type: "success",
+            text1: "Password Sent",
+            text2: "Your password has been sent to your registered email address",
+          });
+          setForgotPasswordModalVisible(false);
+          setResetEmail("");
+        } else {
+          // If admin reset fails, try warden
+          response = await fetch(
+            "http://192.168.29.83:5000/api/wardenAuth/forgot-password",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
+            }
+          );
+          
+          const wardenData = await response.json();
+          
+          if (response.ok) {
+            Toast.show({
+              type: "success",
+              text1: "Password Sent",
+              text2: "Your password has been sent to your registered email address",
+            });
+            setForgotPasswordModalVisible(false);
+            setResetEmail("");
+          } else {
+            Toast.show({
+              type: "error",
+              text1: "Error",
+              text2: "No account found with this email address",
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Password reset error:", error);
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Something went wrong. Please try again later.",
+      });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -217,7 +328,11 @@ export default function StudentLogin() {
               <Ionicons name="lock-closed-outline" size={14} color="#9aa0a6" />
               <Text style={styles.helperText}> Your data is secured</Text>
             </View>
-            <TouchableOpacity activeOpacity={0.7} disabled={loading}>
+            <TouchableOpacity 
+              activeOpacity={0.7} 
+              disabled={loading}
+              onPress={() => setForgotPasswordModalVisible(true)}
+            >
               <Text style={styles.linkText}>Forgot password?</Text>
             </TouchableOpacity>
           </View>
@@ -243,6 +358,76 @@ export default function StudentLogin() {
           © {new Date().getFullYear()} Student Portal • All rights reserved
         </Text>
       </ScrollView>
+
+      {/* Forgot Password Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={forgotPasswordModalVisible}
+        onRequestClose={() => {
+          setForgotPasswordModalVisible(false);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Reset Password</Text>
+              <TouchableOpacity
+                onPress={() => setForgotPasswordModalVisible(false)}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalSubtitle}>
+              Enter your registered email address and we'll send you your password.
+            </Text>
+            
+            <View style={styles.modalInputContainer}>
+              <TextInput
+                ref={resetEmailRef}
+                style={styles.modalInput}
+                placeholder="Email address"
+                placeholderTextColor="#9aa0a6"
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="email-address"
+                returnKeyType="send"
+                editable={!resetLoading}
+                textContentType="emailAddress"
+                autoComplete="email"
+                importantForAutofill="yes"
+                onSubmitEditing={handleForgotPassword}
+              />
+            </View>
+            
+            <View style={styles.modalButtonContainer}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setForgotPasswordModalVisible(false)}
+                disabled={resetLoading}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSubmitButton, resetLoading && styles.modalButtonDisabled]}
+                onPress={handleForgotPassword}
+                disabled={resetLoading}
+              >
+                {resetLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>Send Password</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -405,5 +590,89 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#6b7280",
     textAlign: "center",
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContent: {
+    width: "100%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalInputContainer: {
+    marginBottom: 24,
+  },
+  modalInput: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    backgroundColor: "#f9fafb",
+  },
+  modalButtonContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+  },
+  modalButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    minWidth: 100,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalCancelButton: {
+    backgroundColor: "#f3f4f6",
+  },
+  modalCancelButtonText: {
+    color: "#4b5563",
+    fontWeight: "600",
+  },
+  modalSubmitButton: {
+    backgroundColor: "#2563eb",
+  },
+  modalSubmitButtonText: {
+    color: "white",
+    fontWeight: "600",
+  },
+  modalButtonDisabled: {
+    opacity: 0.7,
   },
 });

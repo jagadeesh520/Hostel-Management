@@ -102,7 +102,7 @@ export default function AdminDashboard() {
       route: "/dashboards/AdminDashboard/create-hostel",
     },
     {
-      label: "Manage Wardens",
+      label: "Assign Warden",
       icon: <FontAwesome5 name="user-shield" size={20} color="white" />,
       color: "#4CD964", // green
       route: "/dashboards/AdminDashboard/manage-wardens",
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
       route: "/dashboards/WardenDashboard/MenuChild",
     },
     {
-      label: "Reports",
+      label: "Attendace Report",
       icon: <FontAwesome5 name="chart-bar" size={20} color="white" />,
       color: "#AF52DE", // purple
       route: "/dashboards/AdminDashboard/AttendanceDashboard",

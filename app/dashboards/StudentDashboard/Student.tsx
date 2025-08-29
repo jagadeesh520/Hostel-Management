@@ -169,13 +169,13 @@ export default function StudentDashboard() {
     },
     {
       id: "7",
-      title: "Events",
+      title: "Leave Apply",
       icon: "account-group",
       color: "#81c784",
-      onPress: () => router.push("/dashboards/StudentDashboard/Events"),
+      onPress: () => router.push("/dashboards/StudentDashboard/LeaveApply"),
     },
     {
-      id: "8",
+      id: "9",
       title: "Logout",
       icon: "logout",
       color: "#f44336",

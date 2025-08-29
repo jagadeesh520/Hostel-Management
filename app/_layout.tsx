@@ -108,7 +108,7 @@ export default function RootLayout() {
           {[
             { name: "dashboards/AdminDashboard/Admin", title: "Admin Dashboard" },
             { name: "dashboards/AdminDashboard/create-hostel", title: "Create Hostel" },
-            { name: "dashboards/AdminDashboard/manage-wardens", title: "Warden Assign" },
+            { name: "dashboards/AdminDashboard/manage-wardens", title: "Assign Warden" },
             { name: "dashboards/AdminDashboard/upload-students", title: "Upload Student Details" },
             { name: "dashboards/AdminDashboard/view-students", title: "View Student Details" },
             { name: "dashboards/AdminDashboard/reports", title: "Reports" },
