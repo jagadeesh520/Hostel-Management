@@ -382,7 +382,7 @@ export default function WardenDashboard() {
             onPress={() => router.push("/dashboards/WardenDashboard/MenuChild")}
           />
           <Card
-            title="Issues (Pending/Total)"
+            title="Issues"
             value={`${issuesPending}/${issuesTotal}`}
             color="#EB5757"
             icon="alert-circle-outline"
@@ -392,7 +392,7 @@ export default function WardenDashboard() {
           />
           {/* NEW: Leaves card */}
           <Card
-            title="Leaves (Pending)"
+            title="Leaves"
             value={leavesPendingCount}
             color="#10B981"
             icon="calendar-clock"
@@ -410,8 +410,8 @@ export default function WardenDashboard() {
             }
           />
           <Card
-            title="Room Management"
-            value="Manage"
+            title="Room "
+            value="Allot"
             color="#3B82F6"
             icon="bed-outline"
             onPress={() =>
@@ -419,8 +419,8 @@ export default function WardenDashboard() {
             }
           />
           <Card
-            title="Hostel Structure"
-            value="View"
+            title="Hostel"
+            value={wardens.length}
             color="#6FCF97"
             icon="office-building"
             onPress={() =>

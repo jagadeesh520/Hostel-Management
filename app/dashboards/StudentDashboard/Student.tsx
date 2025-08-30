@@ -157,14 +157,14 @@ export default function StudentDashboard() {
       id: "5",
       title: "Blog",
       icon: "notebook-edit",
-      color: "#81c784",
+      color: "#f06292",
       onPress: () => router.push("/dashboards/StudentDashboard/BlogScreen"),
     },
     {
       id: "6",
       title: "Today's Menu",
       icon: "silverware-fork-knife",
-      color: "#81c784",
+      color: "#ffd54f",
       onPress: () => router.push("/dashboards/WardenDashboard/MenuChild"),
     },
     {
@@ -177,8 +177,8 @@ export default function StudentDashboard() {
     {
       id: "8",
       title: "Room Book",
-      icon: "account-group",
-      color: "#81c784",
+      icon: "bed-outline",
+      color: "#ba68c8",
       onPress: () => router.push("/dashboards/StudentDashboard/StudentHostelView"),
     },
     {

@@ -1,3 +1,4 @@
+import { FontAwesome5 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -48,7 +49,6 @@ export default function AdminHostelView() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // ✅ Update UI immediately
       setSelectedBlock((prev: any) => {
         if (!prev) return prev;
         const updatedFloors = prev.floors.map((floor: any) => ({
@@ -69,6 +69,19 @@ export default function AdminHostelView() {
     }
   };
 
+  // 🔹 Decide room color based on occupancy
+  const getRoomStyle = (room: any) => {
+    if (room.isBlocked) return styles.roomBlocked;
+
+    const totalBeds = room.beds.length;
+    const occupiedBeds = room.beds.filter((b: any) => b.occupied).length;
+
+    if (occupiedBeds === 0) return styles.roomAvailable; // all free
+    if (occupiedBeds === totalBeds) return styles.roomFull; // fully occupied
+
+    return styles.roomPartial; // partially occupied
+  };
+
   const renderRooms = (block: any) => {
     const allRooms: any[] = [];
     block.floors.forEach((floor: any) => allRooms.push(...floor.rooms));
@@ -84,7 +97,7 @@ export default function AdminHostelView() {
             <TouchableOpacity
               style={[
                 styles.roomBox,
-                item.isBlocked && styles.roomBlocked,
+                getRoomStyle(item),
                 selectedRoom?.roomNumber === item.roomNumber &&
                   styles.roomSelected,
               ]}
@@ -95,6 +108,7 @@ export default function AdminHostelView() {
             >
               <Text style={styles.roomText}>{item.roomNumber}</Text>
               <Text style={styles.bedsCount}>
+                {item.beds?.filter((b: any) => b.occupied).length}/
                 {item.beds?.length || 0} beds
               </Text>
               {item.isBlocked && <Text style={styles.blockedLabel}>🚫</Text>}
@@ -124,21 +138,51 @@ export default function AdminHostelView() {
     </View>
   );
 
+  // calculate totals
+  const getBlockStats = (block: any) => {
+    let totalRooms = 0;
+    let totalBeds = 0;
+    let occupiedBeds = 0;
+
+    block.floors.forEach((floor: any) => {
+      totalRooms += floor.rooms.length;
+      floor.rooms.forEach((room: any) => {
+        totalBeds += room.beds.length;
+        occupiedBeds += room.beds.filter((b: any) => b.occupied).length;
+      });
+    });
+
+    return { totalRooms, totalBeds, occupiedBeds };
+  };
+
   return (
     <SafeAreaView style={{ flex: 1 }}>
       {!selectedBlock ? (
         <FlatList
           data={blocks}
           keyExtractor={(item, idx) => idx.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.blockBox}
-              onPress={() => setSelectedBlock(item)}
-            >
-              <Text style={styles.blockText}>{item.name}</Text>
-            </TouchableOpacity>
-          )}
-          contentContainerStyle={{ paddingBottom: 50 }}
+          renderItem={({ item }) => {
+            const { totalRooms, totalBeds, occupiedBeds } = getBlockStats(item);
+            return (
+              <TouchableOpacity
+                style={styles.blockCard}
+                onPress={() => setSelectedBlock(item)}
+              >
+                <View style={styles.blockHeader}>
+                  <FontAwesome5 name="building" size={24} color="#2563EB" />
+                  <Text style={styles.blockTitle}>{item.name}</Text>
+                </View>
+
+                <View style={styles.blockStats}>
+                  <Text style={styles.statText}>🏠 {totalRooms} Rooms</Text>
+                  <Text style={styles.statText}>
+                    🛏 {occupiedBeds}/{totalBeds} Beds Occupied
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={{ padding: 12, paddingBottom: 50 }}
         />
       ) : (
         <View style={styles.container}>
@@ -164,15 +208,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 12, backgroundColor: "#F9FAFB" },
   sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
 
-  // Blocks
-  blockBox: {
+  // Block Cards
+  blockCard: {
+    backgroundColor: "#fff",
     padding: 16,
     marginVertical: 8,
-    borderRadius: 10,
-    backgroundColor: "#E0F2FE",
-    alignItems: "center",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  blockText: { fontSize: 16, fontWeight: "600", color: "#2563EB" },
+  blockHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
+  blockTitle: { fontSize: 18, fontWeight: "700", marginLeft: 8, color: "#2563EB" },
+  blockStats: { marginTop: 4 },
+  statText: { fontSize: 14, color: "#374151", marginTop: 2 },
 
   // Rooms
   roomsContainer: { marginTop: 12 },
@@ -181,16 +231,21 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     margin: 6,
     borderRadius: 10,
-    backgroundColor: "#F3F4F6",
     justifyContent: "center",
     alignItems: "center",
     elevation: 2,
-    padding: 4,
+    padding: 6,
   },
   roomSelected: { borderWidth: 2, borderColor: "#2563EB" },
-  roomBlocked: { backgroundColor: "#FEE2E2" },
+
+  // Dynamic room colors
+  roomAvailable: { backgroundColor: "#A7F3D0" }, // green
+  roomPartial: { backgroundColor: "#FEF3C7" },   // yellow
+  roomFull: { backgroundColor: "#FECACA" },      // red
+  roomBlocked: { backgroundColor: "#D1D5DB" },   // grey
+
   roomText: { fontWeight: "700", fontSize: 14, color: "#111827" },
-  bedsCount: { fontSize: 12, color: "#4B5563", marginTop: 4 },
+  bedsCount: { fontSize: 12, color: "#374151", marginTop: 4 },
   blockedLabel: { color: "red", fontSize: 12, fontWeight: "700" },
 
   // Beds

@@ -10,16 +10,21 @@ import {
   View,
 } from "react-native";
 
-
 type HostelType = "Boys" | "Girls";
+
+interface Block {
+  name: string;
+  _id?: string;
+  floors?: any[];
+}
 
 export default function CreateHostel() {
   const [hostelType, setHostelType] = useState<HostelType | null>(null);
   const [blocks, setBlocks] = useState<string[]>([""]);
 
   const [savedHostels, setSavedHostels] = useState<{
-    Boys: string[];
-    Girls: string[];
+    Boys: Block[];
+    Girls: Block[];
   }>({
     Boys: [],
     Girls: [],
@@ -32,33 +37,33 @@ export default function CreateHostel() {
   };
 
   useEffect(() => {
-  const fetchSavedHostels = async () => {
-    try {
-      const token = await AsyncStorage.getItem("adminToken");
-      if (!token) return;
+    const fetchSavedHostels = async () => {
+      try {
+        const token = await AsyncStorage.getItem("adminToken");
+        if (!token) return;
 
-      const response = await fetch("http://192.168.29.83:5000/api/hostels/create", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSavedHostels({
-          Boys: data.Boys || [],
-          Girls: data.Girls || [],
+        const response = await fetch("http://192.168.29.83:5000/api/hostels/create", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
-      } else {
-        console.warn("Failed to fetch hostels");
-      }
-    } catch (err) {
-      console.error("Error loading hostels:", err);
-    }
-  };
 
-  fetchSavedHostels();
-}, []);
+        if (response.ok) {
+          const data = await response.json();
+          setSavedHostels({
+            Boys: data.Boys || [],
+            Girls: data.Girls || [],
+          });
+        } else {
+          console.warn("Failed to fetch hostels");
+        }
+      } catch (err) {
+        console.error("Error loading hostels:", err);
+      }
+    };
+
+    fetchSavedHostels();
+  }, []);
 
   const handleBlockChange = (text: string, index: number) => {
     const updatedBlocks = [...blocks];
@@ -86,10 +91,12 @@ export default function CreateHostel() {
 
     const updated = { ...savedHostels };
     if (editInfo) {
-      updated[editInfo.type][editInfo.index] = validBlocks[0];
+      updated[editInfo.type][editInfo.index].name = validBlocks[0];
       setEditInfo(null);
     } else {
-      updated[hostelType] = [...updated[hostelType], ...validBlocks];
+      validBlocks.forEach((b) => {
+        updated[hostelType].push({ name: b.trim() });
+      });
     }
 
     setSavedHostels(updated);
@@ -99,7 +106,7 @@ export default function CreateHostel() {
 
   const handleEditBlock = (type: HostelType, index: number) => {
     setHostelType(type);
-    setBlocks([savedHostels[type][index]]);
+    setBlocks([savedHostels[type][index].name]);
     setEditInfo({ type, index });
   };
 
@@ -109,41 +116,39 @@ export default function CreateHostel() {
     setSavedHostels(updated);
   };
 
-const handleSaveToBackend = async () => {
-  try {
-    const token = await AsyncStorage.getItem("adminToken");
-    if (!token) {
-      Alert.alert("Auth Error", "User not logged in");
-      return;
+  const handleSaveToBackend = async () => {
+    try {
+      const token = await AsyncStorage.getItem("adminToken");
+      if (!token) {
+        Alert.alert("Auth Error", "User not logged in");
+        return;
+      }
+
+      const response = await fetch("http://192.168.29.83:5000/api/hostels/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          boys: savedHostels.Boys.map((b) => b.name.trim()),
+          girls: savedHostels.Girls.map((g) => g.name.trim()),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert("Success", "Hostel data updated on backend!");
+      } else {
+        console.error("Save failed:", data);
+        Alert.alert("Failed", data.message || data.error || "Something went wrong");
+      }
+    } catch (error) {
+      console.error("Backend error:", error);
+      Alert.alert("Error", "Could not connect to backend");
     }
-
-    const response = await fetch("http://192.168.29.83:5000/api/hostels/update", {
-      method: "PUT", // <-- use PUT
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        boys: savedHostels.Boys.map(b => b.trim()),
-        girls: savedHostels.Girls.map(g => g.trim()),
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      Alert.alert("Success", "Hostel data updated on backend!");
-    } else {
-      console.error("Save failed:", data);
-      Alert.alert("Failed", data.message || data.error || "Something went wrong");
-    }
-  } catch (error) {
-    console.error("Backend error:", error);
-    Alert.alert("Error", "Could not connect to backend");
-  }
-};
-
-
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -210,19 +215,13 @@ const handleSaveToBackend = async () => {
           <Text style={styles.sectionTitle}>🏢 Boys Hostel Blocks:</Text>
           {savedHostels.Boys.map((block, index) => (
             <View key={index} style={styles.blockItem}>
-              <Text style={styles.blockText}>{block}</Text>
+              <Text style={styles.blockText}>{block.name}</Text>
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  onPress={() => handleEditBlock("Boys", index)}
-                >
+                <TouchableOpacity onPress={() => handleEditBlock("Boys", index)}>
                   <Text style={styles.actionText}>Edit</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteSavedBlock("Boys", index)}
-                >
-                  <Text style={[styles.actionText, { color: "red" }]}>
-                    Delete
-                  </Text>
+                <TouchableOpacity onPress={() => handleDeleteSavedBlock("Boys", index)}>
+                  <Text style={[styles.actionText, { color: "red" }]}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -236,19 +235,13 @@ const handleSaveToBackend = async () => {
           <Text style={styles.sectionTitle}>🏢 Girls Hostel Blocks:</Text>
           {savedHostels.Girls.map((block, index) => (
             <View key={index} style={styles.blockItem}>
-              <Text style={styles.blockText}>{block}</Text>
+              <Text style={styles.blockText}>{block.name}</Text>
               <View style={styles.actionButtons}>
-                <TouchableOpacity
-                  onPress={() => handleEditBlock("Girls", index)}
-                >
+                <TouchableOpacity onPress={() => handleEditBlock("Girls", index)}>
                   <Text style={styles.actionText}>Edit</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleDeleteSavedBlock("Girls", index)}
-                >
-                  <Text style={[styles.actionText, { color: "red" }]}>
-                    Delete
-                  </Text>
+                <TouchableOpacity onPress={() => handleDeleteSavedBlock("Girls", index)}>
+                  <Text style={[styles.actionText, { color: "red" }]}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -268,7 +261,7 @@ const handleSaveToBackend = async () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingTop:5,
+    paddingTop: 5,
     backgroundColor: "#f9f9f9",
     flexGrow: 1,
   },

@@ -116,6 +116,8 @@ export default function RootLayout() {
             { name: "dashboards/AdminDashboard/BulkUploadStudents", title: "Student Login Details" },
             { name: "dashboards/AdminDashboard/AttendanceDashboard", title: "Attendance Dashboard" },
             { name: "dashboards/AdminDashboard/addDailyRates", title: "Daily Mess Rates" },
+            { name: "dashboards/AdminDashboard/AdminBlockRules", title: "Block Assignment" },
+            { name: "dashboards/AdminDashboard/AdminHostelView", title: "Admin Hostel View" },
             { name: "dashboards/WardenDashboard/WardenDashbord", title: "Warden Dashboard" },
             { name: "dashboards/WardenDashboard/WardenTickets", title: "Assigned Tickets" },
             { name: "dashboards/WardenDashboard/StudentListScreen", title: "Take Attendance" },
@@ -125,12 +127,16 @@ export default function RootLayout() {
             { name: "dashboards/WardenDashboard/AttendanceChild", title: "Attendance" },
             { name: "dashboards/WardenDashboard/CreateIssue", title: "Create Request to Admin" },
             { name: "dashboards/WardenDashboard/StudentList", title: "Take Attendance" },
+            { name: "dashboards/WardenDashboard/WardenHostelView", title: "Warden Hostel View" },
+            { name: "dashboards/WardenDashboard/WardenLeaveDashboard", title: "Leave Request" },
             { name: "dashboards/StudentDashboard/Student", title: "Student Dashboard" },
             { name: "dashboards/StudentDashboard/TimesheetScreen", title: "Timesheet" },
             { name: "dashboards/StudentDashboard/RaiseTicket", title: "Raise a Ticket" },
             { name: "dashboards/StudentDashboard/MyProfile", title: "My Profile" },
             { name: "dashboards/StudentDashboard/BlogScreen", title: "Student Blog" },
             { name: "dashboards/StudentDashboard/AttendanceScanner", title: "Self Check-In" },
+            { name: "dashboards/StudentDashboard/LeaveApply", title: "Apply Leave" },
+            { name: "dashboards/StudentDashboard/StudentHostelView", title: "Room Booking" },
           ].map((screen) => (
             <Stack.Screen
               key={screen.name}

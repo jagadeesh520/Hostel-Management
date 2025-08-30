@@ -157,8 +157,8 @@ export default function AdminDashboard() {
     },
     {
       label: "Hostel Assign-Rules",
-      icon: <FontAwesome5 name="bed" size={20} color="white" />,
-      color: "#6366F1", // Indigo  → hostel/building theme
+      icon: <FontAwesome5 name="gavel" size={20} color="white" />,
+      color: "#ffd54f", // Indigo  → hostel/building theme
       route: "/dashboards/AdminDashboard/AdminBlockRules",
     },
     {
