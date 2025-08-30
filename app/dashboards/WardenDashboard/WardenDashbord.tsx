@@ -51,7 +51,7 @@ type LeaveItem = {
   student?: {
     _id: string;
     studentName?: string; // <- DB field
-    name?: string;        // optional fallback
+    name?: string; // optional fallback
     email?: string;
     rollNo?: string;
     blockName?: string;
@@ -90,7 +90,8 @@ export default function WardenDashboard() {
 
   // Leaves UI state
   const [leavesPendingCount, setLeavesPendingCount] = useState(0);
-  const [latestPendingLeave, setLatestPendingLeave] = useState<LeaveItem | null>(null);
+  const [latestPendingLeave, setLatestPendingLeave] =
+    useState<LeaveItem | null>(null);
 
   useEffect(() => {
     fetchAll();
@@ -134,7 +135,9 @@ export default function WardenDashboard() {
     if (!t.assignedWarden) return "Unassigned";
     if (typeof t.assignedWarden !== "string") {
       return t.assignedWarden.name
-        ? `${t.assignedWarden.name}${t.assignedWarden.block ? ` (${t.assignedWarden.block})` : ""}`
+        ? `${t.assignedWarden.name}${
+            t.assignedWarden.block ? ` (${t.assignedWarden.block})` : ""
+          }`
         : "Assigned";
     }
     const w = wardens.find((x) => x._id === t.assignedWarden);
@@ -164,13 +167,18 @@ export default function WardenDashboard() {
         setTickets(Array.isArray(res.data) ? res.data : []);
       } catch {
         try {
-          const res2 = await axios.get<IssueTicket[]>(`${BASE_URL}/api/tickets`, {
-            headers,
-          });
+          const res2 = await axios.get<IssueTicket[]>(
+            `${BASE_URL}/api/tickets`,
+            {
+              headers,
+            }
+          );
           setTickets(Array.isArray(res2.data) ? res2.data : []);
         } catch {
           setTickets([]);
-          console.warn("Could not load tickets (tried /issueTicket/tickets and /tickets)");
+          console.warn(
+            "Could not load tickets (tried /issueTicket/tickets and /tickets)"
+          );
         }
       }
 
@@ -214,7 +222,10 @@ export default function WardenDashboard() {
           validateStatus: () => true,
         });
         if (resLeaves.status !== 200) {
-          Alert.alert("Leaves error", resLeaves.data?.message || `HTTP ${resLeaves.status}`);
+          Alert.alert(
+            "Leaves error",
+            resLeaves.data?.message || `HTTP ${resLeaves.status}`
+          );
           setLeavesPendingCount(0);
           setLatestPendingLeave(null);
         } else {
@@ -235,7 +246,9 @@ export default function WardenDashboard() {
 
   // derived: counts & attendance
   const issuesTotal = tickets.length;
-  const issuesResolved = tickets.filter((t) => toLower(t.status) === "resolved").length;
+  const issuesResolved = tickets.filter(
+    (t) => toLower(t.status) === "resolved"
+  ).length;
   const issuesPending = issuesTotal - issuesResolved;
 
   const presentPct = useMemo(
@@ -292,12 +305,18 @@ export default function WardenDashboard() {
               { headers, validateStatus: () => true }
             );
             if (res.status !== 200) {
-              return Alert.alert("Error", res.data?.message || "Failed to reject");
+              return Alert.alert(
+                "Error",
+                res.data?.message || "Failed to reject"
+              );
             }
             Toast.show({ type: "success", text1: "Leave rejected" });
             fetchAll();
           } catch (e: any) {
-            Alert.alert("Error", e?.response?.data?.message || "Failed to reject");
+            Alert.alert(
+              "Error",
+              e?.response?.data?.message || "Failed to reject"
+            );
           }
         },
       },
@@ -335,7 +354,9 @@ export default function WardenDashboard() {
 
           <TouchableOpacity
             style={[styles.quickBtn, { backgroundColor: "#EF4444" }]}
-            onPress={() => router.push("/dashboards/WardenDashboard/CreateIssue")}
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/CreateIssue")
+            }
           >
             <MaterialCommunityIcons name="alert-plus" size={18} color="#fff" />
             <Text style={styles.quickText}>Create Request</Text>
@@ -349,7 +370,9 @@ export default function WardenDashboard() {
             value={wardens.length}
             color="#6FCF97"
             icon="office-building"
-            onPress={() => router.push("/dashboards/WardenDashboard/BlocksChild")}
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/BlocksChild")
+            }
           />
           <Card
             title="Today’s Menu"
@@ -363,7 +386,9 @@ export default function WardenDashboard() {
             value={`${issuesPending}/${issuesTotal}`}
             color="#EB5757"
             icon="alert-circle-outline"
-            onPress={() => router.push("/dashboards/WardenDashboard/WardenTickets")}
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/WardenTickets")
+            }
           />
           {/* NEW: Leaves card */}
           <Card
@@ -371,14 +396,36 @@ export default function WardenDashboard() {
             value={leavesPendingCount}
             color="#10B981"
             icon="calendar-clock"
-            onPress={() => router.push("/dashboards/WardenDashboard/WardenLeaveDashboard")}
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/WardenLeaveDashboard")
+            }
           />
           <Card
             title="Attendance"
             value={`${presentStudents}/${totalStudents}`}
             color="#56CCF2"
             icon="account-check-outline"
-            onPress={() => router.push("/dashboards/WardenDashboard/AttendanceChild")}
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/AttendanceChild")
+            }
+          />
+          <Card
+            title="Room Management"
+            value="Manage"
+            color="#3B82F6"
+            icon="bed-outline"
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/WardenAddFloor")
+            }
+          />
+          <Card
+            title="Hostel Structure"
+            value="View"
+            color="#6FCF97"
+            icon="office-building"
+            onPress={() =>
+              router.push("/dashboards/WardenDashboard/WardenHostelView")
+            }
           />
         </View>
 
@@ -386,7 +433,11 @@ export default function WardenDashboard() {
         <View style={styles.issuesListCard}>
           <View className="issuesListHeader" style={styles.issuesListHeader}>
             <Text style={styles.issuesListTitle}>Issue</Text>
-            <TouchableOpacity onPress={() => router.push("/dashboards/WardenDashboard/WardenTickets")}>
+            <TouchableOpacity
+              onPress={() =>
+                router.push("/dashboards/WardenDashboard/WardenTickets")
+              }
+            >
               <Text style={styles.linkText}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -396,21 +447,33 @@ export default function WardenDashboard() {
           ) : (
             <TouchableOpacity
               style={styles.ticketRow}
-              onPress={() => router.push("/dashboards/WardenDashboard/WardenTickets")}
+              onPress={() =>
+                router.push("/dashboards/WardenDashboard/WardenTickets")
+              }
               activeOpacity={0.9}
             >
               <View style={{ flex: 1 }}>
-                <Text style={styles.ticketTitle}>{previewTicket.issueType || "Issue"}</Text>
+                <Text style={styles.ticketTitle}>
+                  {previewTicket.issueType || "Issue"}
+                </Text>
                 <Text style={styles.ticketSub}>
-                  {getAssignedName(previewTicket)} • #{previewTicket.rollNo || "--"}
+                  {getAssignedName(previewTicket)} • #
+                  {previewTicket.rollNo || "--"}
                 </Text>
                 {previewTicket.description ? (
-                  <Text style={[styles.ticketSub, { marginTop: 4 }]} numberOfLines={2}>
+                  <Text
+                    style={[styles.ticketSub, { marginTop: 4 }]}
+                    numberOfLines={2}
+                  >
                     {previewTicket.description}
                   </Text>
                 ) : null}
               </View>
-              <MaterialCommunityIcons name="chevron-right" size={22} color="#6B7280" />
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={22}
+                color="#6B7280"
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -419,7 +482,11 @@ export default function WardenDashboard() {
         <View style={styles.issuesListCard}>
           <View style={styles.issuesListHeader}>
             <Text style={styles.issuesListTitle}>Latest Leave Request</Text>
-            <TouchableOpacity onPress={() => router.push("/dashboards/WardenDashboard/WardenLeaveDashboard")}>
+            <TouchableOpacity
+              onPress={() =>
+                router.push("/dashboards/WardenDashboard/WardenLeaveDashboard")
+              }
+            >
               <Text style={styles.linkText}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -430,17 +497,22 @@ export default function WardenDashboard() {
             <View style={styles.ticketRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.ticketTitle}>
-                  {latestPendingLeave.leaveType.toUpperCase()} • {latestPendingLeave.numberOfDays} day
+                  {latestPendingLeave.leaveType.toUpperCase()} •{" "}
+                  {latestPendingLeave.numberOfDays} day
                   {latestPendingLeave.numberOfDays !== 1 ? "s" : ""}
                 </Text>
                 <Text style={styles.ticketSub}>
-                  {shortDate(latestPendingLeave.fromDate)} → {shortDate(latestPendingLeave.toDate)}
+                  {shortDate(latestPendingLeave.fromDate)} →{" "}
+                  {shortDate(latestPendingLeave.toDate)}
                 </Text>
                 <Text style={styles.ticketSub}>
                   {displayStudentLine(latestPendingLeave.student)}
                 </Text>
                 {latestPendingLeave.reason ? (
-                  <Text style={[styles.ticketSub, { marginTop: 4 }]} numberOfLines={2}>
+                  <Text
+                    style={[styles.ticketSub, { marginTop: 4 }]}
+                    numberOfLines={2}
+                  >
                     {latestPendingLeave.reason}
                   </Text>
                 ) : null}
@@ -452,13 +524,17 @@ export default function WardenDashboard() {
                   style={styles.approveBtn}
                   onPress={() => approveLeave(latestPendingLeave._id)}
                 >
-                  <Text style={{ fontWeight: "700", color: "#2e7d32" }}>Approve</Text>
+                  <Text style={{ fontWeight: "700", color: "#2e7d32" }}>
+                    Approve
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.rejectBtn}
                   onPress={() => rejectLeave(latestPendingLeave._id)}
                 >
-                  <Text style={{ fontWeight: "700", color: "#c62828" }}>Reject</Text>
+                  <Text style={{ fontWeight: "700", color: "#c62828" }}>
+                    Reject
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -493,7 +569,8 @@ export default function WardenDashboard() {
             <Text style={styles.progressValue}>{absentPct.toFixed(0)}%</Text>
           </View>
           <Text style={styles.smallText}>
-            {presentStudents} Present / {absentStudents} Absent / {totalStudents} Total
+            {presentStudents} Present / {absentStudents} Absent /{" "}
+            {totalStudents} Total
           </Text>
         </View>
       </ScrollView>
@@ -585,7 +662,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: 8,
   },
-  card: { width: "48%", borderRadius: 16, padding: 16, marginBottom: 12, elevation: 4 },
+  card: {
+    width: "48%",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 4,
+  },
   cardRow: { flexDirection: "row", alignItems: "center", columnGap: 12 },
   iconBadge: {
     width: 36,
@@ -659,9 +742,19 @@ const styles = StyleSheet.create({
     padding: 16,
     elevation: 3,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#2D3436", marginBottom: 10 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#2D3436",
+    marginBottom: 10,
+  },
   progressRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  progressLabel: { width: 70, fontSize: 14, color: "#374151", fontWeight: "600" },
+  progressLabel: {
+    width: 70,
+    fontSize: 14,
+    color: "#374151",
+    fontWeight: "600",
+  },
   progressBarTrack: {
     flex: 1,
     height: 12,
@@ -671,6 +764,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   progressBarFill: { height: "100%", borderRadius: 6 },
-  progressValue: { width: 40, fontSize: 13, fontWeight: "600", textAlign: "right" },
-  smallText: { fontSize: 12, color: "#6B7280", marginTop: 8, textAlign: "center" },
+  progressValue: {
+    width: 40,
+    fontSize: 13,
+    fontWeight: "600",
+    textAlign: "right",
+  },
+  smallText: {
+    fontSize: 12,
+    color: "#6B7280",
+    marginTop: 8,
+    textAlign: "center",
+  },
 });

@@ -155,6 +155,18 @@ export default function AdminDashboard() {
       color: "#AF52DE", // purple
       route: "/dashboards/AdminDashboard/AttendanceDashboard",
     },
+    {
+      label: "Hostel Assign-Rules",
+      icon: <FontAwesome5 name="bed" size={20} color="white" />,
+      color: "#6366F1", // Indigo  → hostel/building theme
+      route: "/dashboards/AdminDashboard/AdminBlockRules",
+    },
+    {
+      label: "Hostel View",
+      icon: <FontAwesome5 name="bed" size={20} color="white" />,
+      color: "#6366F1", // Indigo  → hostel/building theme
+      route: "/dashboards/AdminDashboard/AdminHostelView",
+    },
   ];
 
   const handleNavigation = (item: MenuItem) => {

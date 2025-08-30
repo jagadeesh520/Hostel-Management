@@ -175,6 +175,13 @@ export default function StudentDashboard() {
       onPress: () => router.push("/dashboards/StudentDashboard/LeaveApply"),
     },
     {
+      id: "8",
+      title: "Room Book",
+      icon: "account-group",
+      color: "#81c784",
+      onPress: () => router.push("/dashboards/StudentDashboard/StudentHostelView"),
+    },
+    {
       id: "9",
       title: "Logout",
       icon: "logout",
