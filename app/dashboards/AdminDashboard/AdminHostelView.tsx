@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Dialog from "react-native-dialog";
 
 const API_BASE = "http://192.168.29.83:5000/api/hostels";
 
@@ -18,6 +19,8 @@ export default function AdminHostelView() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<any | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
+  const [showDialog, setShowDialog] = useState(false);
+  const [targetBlock, setTargetBlock] = useState("");
 
   useEffect(() => {
     fetchBlocks();
@@ -69,6 +72,34 @@ export default function AdminHostelView() {
     }
   };
 
+  // 🔹 NEW: Unallocate all students in a block
+  const unallocateBlock = (blockName: string) => {
+    setTargetBlock(blockName);
+    setShowDialog(true);
+  };
+
+  const confirmUnallocate = async () => {
+    try {
+      const token = await AsyncStorage.getItem("adminToken");
+      await axios.put(
+        `${API_BASE}/admin/unallocate-block/${targetBlock}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      Alert.alert(
+        "🎉 Success",
+        `All students in  ${targetBlock} have been unallocated`
+      );
+      fetchBlocks();
+      setSelectedBlock(null);
+      setSelectedRoom(null);
+    } catch (err) {
+      Alert.alert("Error", "Failed to unallocate block");
+    } finally {
+      setShowDialog(false);
+    }
+  };
+
   // 🔹 Decide room color based on occupancy
   const getRoomStyle = (room: any) => {
     if (room.isBlocked) return styles.roomBlocked;
@@ -87,35 +118,60 @@ export default function AdminHostelView() {
     block.floors.forEach((floor: any) => allRooms.push(...floor.rooms));
 
     return (
-      <View style={styles.roomsContainer}>
-        <Text style={styles.sectionTitle}>Rooms in {block.name}</Text>
-        <FlatList
-          data={allRooms}
-          numColumns={4}
-          keyExtractor={(item) => item.roomNumber}
-          renderItem={({ item }) => (
+      <>
+        {/* Your main UI */}
+        <Dialog.Container visible={showDialog}>
+          <Dialog.Title>⚠️ Confirm Unallocation</Dialog.Title>
+          <Dialog.Description>
+            This will remove ALL students from block {targetBlock}. Are you
+            sure you want to continue?
+          </Dialog.Description>
+          <Dialog.Button label="Cancel" onPress={() => setShowDialog(false)} />
+          <Dialog.Button label="Yes, Unallocate" onPress={confirmUnallocate} />
+        </Dialog.Container>
+
+        <View style={styles.roomsContainer}>
+          <View style={styles.roomHeader}>
+            <Text style={styles.sectionTitle}>Rooms in {block.name}</Text>
+            {/* Unallocate Block Button */}
             <TouchableOpacity
-              style={[
-                styles.roomBox,
-                getRoomStyle(item),
-                selectedRoom?.roomNumber === item.roomNumber &&
-                  styles.roomSelected,
-              ]}
-              onPress={() => setSelectedRoom(item)}
-              onLongPress={() =>
-                toggleRoomBlock(block.name, item.roomNumber, !item.isBlocked)
-              }
+              style={styles.unallocateBtn}
+              onPress={() => unallocateBlock(block.name)}
             >
-              <Text style={styles.roomText}>{item.roomNumber}</Text>
-              <Text style={styles.bedsCount}>
-                {item.beds?.filter((b: any) => b.occupied).length}/
-                {item.beds?.length || 0} beds
+              <Text style={{ color: "#fff", fontWeight: "700" }}>
+                Unallocate Block
               </Text>
-              {item.isBlocked && <Text style={styles.blockedLabel}>🚫</Text>}
             </TouchableOpacity>
-          )}
-        />
-      </View>
+          </View>
+
+          <FlatList
+            data={allRooms}
+            numColumns={4}
+            keyExtractor={(item) => item.roomNumber}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.roomBox,
+                  getRoomStyle(item),
+                  selectedRoom?.roomNumber === item.roomNumber &&
+                    styles.roomSelected,
+                ]}
+                onPress={() => setSelectedRoom(item)}
+                onLongPress={() =>
+                  toggleRoomBlock(block.name, item.roomNumber, !item.isBlocked)
+                }
+              >
+                <Text style={styles.roomText}>{item.roomNumber}</Text>
+                <Text style={styles.bedsCount}>
+                  {item.beds?.filter((b: any) => b.occupied).length}/
+                  {item.beds?.length || 0} beds
+                </Text>
+                {item.isBlocked && <Text style={styles.blockedLabel}>🚫</Text>}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </>
     );
   };
 
@@ -220,12 +276,30 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   blockHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  blockTitle: { fontSize: 18, fontWeight: "700", marginLeft: 8, color: "#2563EB" },
+  blockTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginLeft: 8,
+    color: "#2563EB",
+  },
   blockStats: { marginTop: 4 },
   statText: { fontSize: 14, color: "#374151", marginTop: 2 },
 
   // Rooms
   roomsContainer: { marginTop: 12 },
+  roomHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingRight: 4,
+  },
+  unallocateBtn: {
+    backgroundColor: "#DC2626",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
   roomBox: {
     flex: 1,
     aspectRatio: 1,
@@ -240,9 +314,9 @@ const styles = StyleSheet.create({
 
   // Dynamic room colors
   roomAvailable: { backgroundColor: "#A7F3D0" }, // green
-  roomPartial: { backgroundColor: "#FEF3C7" },   // yellow
-  roomFull: { backgroundColor: "#FECACA" },      // red
-  roomBlocked: { backgroundColor: "#D1D5DB" },   // grey
+  roomPartial: { backgroundColor: "#FEF3C7" }, // yellow
+  roomFull: { backgroundColor: "#FECACA" }, // red
+  roomBlocked: { backgroundColor: "#D1D5DB" }, // grey
 
   roomText: { fontWeight: "700", fontSize: 14, color: "#111827" },
   bedsCount: { fontSize: 12, color: "#374151", marginTop: 4 },
