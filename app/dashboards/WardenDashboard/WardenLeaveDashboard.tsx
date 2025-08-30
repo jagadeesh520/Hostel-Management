@@ -1,5 +1,5 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -11,41 +11,41 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = 'http://192.168.29.83:5000';
+const API_URL = "http://192.168.29.83:5000";
 const WARDEN_API = `${API_URL}/api/leave`; // adjust if mounted elsewhere
 
-type Status = 'pending' | 'approved' | 'rejected';
-type Tab = 'all' | Status | 'cancelled';
+type Status = "pending" | "approved" | "rejected";
+type Tab = "all" | Status | "cancelled";
 
 type LeaveItem = {
   _id: string;
-  leaveType: 'casual' | 'medical' | 'emergency';
+  leaveType: "casual" | "medical" | "emergency";
   fromDate: string;
   toDate: string;
   numberOfDays: number;
   reason: string;
-  status: Status | 'cancelled';
+  status: Status | "cancelled";
   createdAt: string;
   student?: {
     _id: string;
     studentName?: string; // <-- from Student collection
-    name?: string;        // optional fallback
+    name?: string; // optional fallback
     email?: string;
     rollNo?: string;
-    year?: string;        // <-- add year
+    year?: string; // <-- add year
     blockName?: string;
   };
 };
 
-const TABS: Tab[] = ['all', 'pending', 'approved', 'rejected', 'cancelled'];
+const TABS: Tab[] = ["all", "pending", "approved", "rejected", "cancelled"];
 
 // helpers
 const shortDate = (iso: string) => new Date(iso).toDateString();
 const displayStudentName = (s?: { studentName?: string; name?: string }) =>
-  s?.studentName || s?.name || 'Student';
+  s?.studentName || s?.name || "Student";
 const displayStudentTriple = (s?: {
   studentName?: string;
   name?: string;
@@ -57,28 +57,31 @@ const displayStudentTriple = (s?: {
   if (s?.rollNo) parts.push(s.rollNo);
   parts.push(nm);
   if (s?.year) parts.push(s.year);
-  return parts.join(' • ');
+  return parts.join(" • ");
 };
 
 export default function WardenLeaveDashboard() {
-  const [tab, setTab] = useState<Tab>('all');
+  const [tab, setTab] = useState<Tab>("all");
   const [items, setItems] = useState<LeaveItem[]>([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [rejectComment, setRejectComment] = useState('');
-  const pendingActionRef = useRef<{ id: string; action: 'approve' | 'reject' } | null>(null);
+  const [rejectComment, setRejectComment] = useState("");
+  const pendingActionRef = useRef<{
+    id: string;
+    action: "approve" | "reject";
+  } | null>(null);
 
   const headerAuth = async () => {
-    const token = await AsyncStorage.getItem('wardenToken');
-    if (!token) throw new Error('Missing warden token');
+    const token = await AsyncStorage.getItem("wardenToken");
+    if (!token) throw new Error("Missing warden token");
     return {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
   };
 
@@ -88,13 +91,19 @@ export default function WardenLeaveDashboard() {
       const headers = await headerAuth();
 
       // Build query: omit status on "all" so backend returns every status
-      const params = new URLSearchParams({ page: String(_page), limit: '10' });
-      if (tab !== 'all') params.append('status', tab);
+      const params = new URLSearchParams({ page: String(_page), limit: "10" });
+      if (tab !== "all") {
+        params.append("status", tab);
+      } else {
+        params.append("status", "all"); // <-- send explicit "all"
+      }
 
-      const res = await fetch(`${WARDEN_API}?${params.toString()}`, { headers });
+      const res = await fetch(`${WARDEN_API}?${params.toString()}`, {
+        headers,
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        Alert.alert('Error', data?.message || 'Failed to load leave requests');
+        Alert.alert("Error", data?.message || "Failed to load leave requests");
         if (!append) {
           setItems([]);
           setPage(1);
@@ -104,14 +113,11 @@ export default function WardenLeaveDashboard() {
       }
 
       let newItems: LeaveItem[] = data?.items || [];
-      // For ALL tab, exclude cancelled from the visible list
-      if (tab === 'all') newItems = newItems.filter((it) => it.status !== 'cancelled');
-
       setPage(data?.page || _page);
       setPages(data?.pages || 1);
       setItems((prev) => (append ? [...prev, ...newItems] : newItems));
     } catch (e: any) {
-      Alert.alert('Auth', e?.message || 'Please login again as warden.');
+      Alert.alert("Auth", e?.message || "Please login again as warden.");
       if (!append) {
         setItems([]);
         setPage(1);
@@ -145,13 +151,13 @@ export default function WardenLeaveDashboard() {
     const q = search.trim().toLowerCase();
     if (!q) return items;
     return items.filter((it) => {
-      const sname = it.student?.studentName?.toLowerCase() || '';
-      const name = it.student?.name?.toLowerCase() || '';
-      const email = it.student?.email?.toLowerCase() || '';
-      const roll = it.student?.rollNo?.toLowerCase() || '';
-      const year = it.student?.year?.toLowerCase() || '';
-      const reason = it.reason?.toLowerCase() || '';
-      const type = it.leaveType?.toLowerCase() || '';
+      const sname = it.student?.studentName?.toLowerCase() || "";
+      const name = it.student?.name?.toLowerCase() || "";
+      const email = it.student?.email?.toLowerCase() || "";
+      const roll = it.student?.rollNo?.toLowerCase() || "";
+      const year = it.student?.year?.toLowerCase() || "";
+      const reason = it.reason?.toLowerCase() || "";
+      const type = it.leaveType?.toLowerCase() || "";
       return (
         sname.includes(q) ||
         name.includes(q) ||
@@ -164,59 +170,94 @@ export default function WardenLeaveDashboard() {
     });
   }, [items, search]);
 
-  const statusPillStyle = (status: LeaveItem['status']) => {
+  const statusPillStyle = (status: LeaveItem["status"]) => {
     const base: any = styles.badge;
-    if (status === 'approved') return [base, { backgroundColor: '#e8f5e9', borderColor: '#2e7d32', color: '#2e7d32' }];
-    if (status === 'rejected') return [base, { backgroundColor: '#ffebee', borderColor: '#c62828', color: '#c62828' }];
-    if (status === 'cancelled') return [base, { backgroundColor: '#eceff1', borderColor: '#607d8b', color: '#607d8b' }];
-    return [base, { backgroundColor: '#fff8e1', borderColor: '#f9a825', color: '#f57f17' }]; // pending
+    if (status === "approved")
+      return [
+        base,
+        {
+          backgroundColor: "#e8f5e9",
+          borderColor: "#2e7d32",
+          color: "#2e7d32",
+        },
+      ];
+    if (status === "rejected")
+      return [
+        base,
+        {
+          backgroundColor: "#ffebee",
+          borderColor: "#c62828",
+          color: "#c62828",
+        },
+      ];
+    if (status === "cancelled")
+      return [
+        base,
+        {
+          backgroundColor: "#eceff1",
+          borderColor: "#607d8b",
+          color: "#607d8b",
+        },
+      ];
+    return [
+      base,
+      { backgroundColor: "#fff8e1", borderColor: "#f9a825", color: "#f57f17" },
+    ]; // pending
   };
 
-  const decide = async (id: string, action: 'approve' | 'reject', comment?: string) => {
+  const decide = async (
+    id: string,
+    action: "approve" | "reject",
+    comment?: string
+  ) => {
     try {
       setDecidingId(id);
       const headers = await headerAuth();
       const res = await fetch(`${WARDEN_API}/${id}/decision`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers,
         body: JSON.stringify({ action, comment }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        Alert.alert('Error', data?.message || 'Failed to update leave');
+        Alert.alert("Error", data?.message || "Failed to update leave");
         return;
       }
       // Optimistic update
       setItems((prev) =>
-        prev.map((it) => (it._id === id ? { ...it, status: action === 'approve' ? 'approved' : 'rejected' } : it))
+        prev.map((it) =>
+          it._id === id
+            ? { ...it, status: action === "approve" ? "approved" : "rejected" }
+            : it
+        )
       );
     } catch (e: any) {
-      Alert.alert('Auth', e?.message || 'Please login again as warden.');
+      Alert.alert("Auth", e?.message || "Please login again as warden.");
     } finally {
       setDecidingId(null);
       setRejectModalOpen(false);
-      setRejectComment('');
+      setRejectComment("");
       pendingActionRef.current = null;
     }
   };
 
   const confirmApprove = (id: string) => {
-    Alert.alert('Approve Leave', 'Approve this leave request?', [
-      { text: 'No' },
-      { text: 'Approve', onPress: () => decide(id, 'approve') },
+    Alert.alert("Approve Leave", "Approve this leave request?", [
+      { text: "No" },
+      { text: "Approve", onPress: () => decide(id, "approve") },
     ]);
   };
 
   const openReject = (id: string) => {
-    pendingActionRef.current = { id, action: 'reject' };
-    setRejectComment('');
+    pendingActionRef.current = { id, action: "reject" };
+    setRejectComment("");
     setRejectModalOpen(true);
   };
 
   const submitReject = () => {
     const ctx = pendingActionRef.current;
     if (!ctx) return setRejectModalOpen(false);
-    decide(ctx.id, 'reject', rejectComment.trim());
+    decide(ctx.id, "reject", rejectComment.trim());
   };
 
   const renderItem = ({ item }: { item: LeaveItem }) => (
@@ -224,34 +265,49 @@ export default function WardenLeaveDashboard() {
       <View style={styles.rowBetween}>
         <View style={{ flex: 1, paddingRight: 8 }}>
           <Text style={styles.title}>
-            {item.leaveType.toUpperCase()} • {item.numberOfDays} day{item.numberOfDays !== 1 ? 's' : ''}
+            {item.leaveType.toUpperCase()} • {item.numberOfDays} day
+            {item.numberOfDays !== 1 ? "s" : ""}
           </Text>
           <Text style={styles.subtle}>
             {shortDate(item.fromDate)} → {shortDate(item.toDate)}
           </Text>
           {/* RollNo • StudentName • Year */}
-          <Text style={styles.subtle}>{displayStudentTriple(item.student)}</Text>
+          <Text style={styles.subtle}>
+            {displayStudentTriple(item.student)}
+          </Text>
         </View>
-        <Text style={statusPillStyle(item.status)}>{item.status.toUpperCase()}</Text>
+        <Text style={statusPillStyle(item.status)}>
+          {item.status.toUpperCase()}
+        </Text>
       </View>
 
-      {!!item.reason && <Text style={styles.reason} numberOfLines={3}>{item.reason}</Text>}
+      {!!item.reason && (
+        <Text style={styles.reason} numberOfLines={3}>
+          {item.reason}
+        </Text>
+      )}
 
-      {item.status === 'pending' && (
+      {item.status === "pending" && (
         <View style={styles.actionsRow}>
           <TouchableOpacity
             onPress={() => confirmApprove(item._id)}
             style={[styles.actionBtn, styles.approveBtn]}
             disabled={decidingId === item._id}
           >
-            {decidingId === item._id ? <ActivityIndicator /> : <Text style={styles.actionBtnText}>Approve</Text>}
+            {decidingId === item._id ? (
+              <ActivityIndicator />
+            ) : (
+              <Text style={styles.actionBtnText}>Approve</Text>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => openReject(item._id)}
             style={[styles.actionBtn, styles.rejectBtn]}
             disabled={decidingId === item._id}
           >
-            <Text style={[styles.actionBtnText, { color: '#c62828' }]}>Reject</Text>
+            <Text style={[styles.actionBtnText, { color: "#c62828" }]}>
+              Reject
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -259,11 +315,15 @@ export default function WardenLeaveDashboard() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
       {/* Header */}
       <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
-        <Text style={{ fontSize: 22, fontWeight: '800' }}>All Leave Requests</Text>
-        <Text style={{ color: '#607d8b', marginTop: 2 }}>Review and take action on student leave applications</Text>
+        <Text style={{ fontSize: 22, fontWeight: "800" }}>
+          All Leave Requests
+        </Text>
+        <Text style={{ color: "#607d8b", marginTop: 2 }}>
+          Review and take action on student leave applications
+        </Text>
       </View>
 
       {/* Tabs */}
@@ -274,7 +334,9 @@ export default function WardenLeaveDashboard() {
             style={[styles.tab, tab === t && styles.tabActive]}
             onPress={() => setTab(t)}
           >
-            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t.toUpperCase()}</Text>
+            <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>
+              {t.toUpperCase()}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -292,7 +354,7 @@ export default function WardenLeaveDashboard() {
 
       {/* List */}
       {loading && items.length === 0 ? (
-        <View style={{ paddingTop: 24, alignItems: 'center' }}>
+        <View style={{ paddingTop: 24, alignItems: "center" }}>
           <ActivityIndicator />
         </View>
       ) : (
@@ -302,18 +364,20 @@ export default function WardenLeaveDashboard() {
           contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           renderItem={renderItem}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
           onEndReachedThreshold={0.3}
           onEndReached={loadMore}
           ListFooterComponent={
             page < pages ? (
               <TouchableOpacity onPress={loadMore} style={styles.loadMoreBtn}>
-                <Text style={{ fontWeight: '700' }}>Load more</Text>
+                <Text style={{ fontWeight: "700" }}>Load more</Text>
               </TouchableOpacity>
             ) : null
           }
           ListEmptyComponent={
-            <Text style={{ textAlign: 'center', color: '#666', marginTop: 16 }}>
+            <Text style={{ textAlign: "center", color: "#666", marginTop: 16 }}>
               No {tab} requests found.
             </Text>
           }
@@ -321,10 +385,17 @@ export default function WardenLeaveDashboard() {
       )}
 
       {/* Reject modal */}
-      <Modal visible={rejectModalOpen} transparent animationType="slide" onRequestClose={() => setRejectModalOpen(false)}>
+      <Modal
+        visible={rejectModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setRejectModalOpen(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={{ fontSize: 16, fontWeight: '700', marginBottom: 10 }}>Reject Leave</Text>
+            <Text style={{ fontSize: 16, fontWeight: "700", marginBottom: 10 }}>
+              Reject Leave
+            </Text>
             <TextInput
               placeholder="Optional comment (reason)"
               value={rejectComment}
@@ -334,15 +405,36 @@ export default function WardenLeaveDashboard() {
               numberOfLines={4}
               textAlignVertical="top"
             />
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-              <TouchableOpacity onPress={() => setRejectModalOpen(false)} style={[styles.modalBtn, { backgroundColor: '#eceff1' }]}>
-                <Text style={{ fontWeight: '700' }}>Cancel</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "flex-end",
+                gap: 12,
+              }}
+            >
+              <TouchableOpacity
+                onPress={() => setRejectModalOpen(false)}
+                style={[styles.modalBtn, { backgroundColor: "#eceff1" }]}
+              >
+                <Text style={{ fontWeight: "700" }}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={submitReject} style={[styles.modalBtn, { backgroundColor: '#ffebee', borderWidth: 1, borderColor: '#e57373' }]}>
+              <TouchableOpacity
+                onPress={submitReject}
+                style={[
+                  styles.modalBtn,
+                  {
+                    backgroundColor: "#ffebee",
+                    borderWidth: 1,
+                    borderColor: "#e57373",
+                  },
+                ]}
+              >
                 {decidingId && pendingActionRef.current?.id === decidingId ? (
                   <ActivityIndicator />
                 ) : (
-                  <Text style={{ fontWeight: '700', color: '#c62828' }}>Reject</Text>
+                  <Text style={{ fontWeight: "700", color: "#c62828" }}>
+                    Reject
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -354,45 +446,100 @@ export default function WardenLeaveDashboard() {
 }
 
 const styles = StyleSheet.create({
-  tabs: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12 },
-  tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#cfd8dc', backgroundColor: '#eceff1' },
-  tabActive: { backgroundColor: '#bbdefb', borderColor: '#90caf9' },
-  tabText: { fontWeight: '700', color: '#37474f' },
-  tabTextActive: { color: '#0d47a1' },
+  tabs: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingTop: 12 },
+  tab: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#cfd8dc",
+    backgroundColor: "#eceff1",
+  },
+  tabActive: { backgroundColor: "#bbdefb", borderColor: "#90caf9" },
+  tabText: { fontWeight: "700", color: "#37474f" },
+  tabTextActive: { color: "#0d47a1" },
 
   searchWrap: { paddingHorizontal: 16, paddingTop: 10 },
-  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
+  searchInput: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
 
-  card: { backgroundColor: '#fff', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#eee', elevation: 2 },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 16, fontWeight: '700' },
-  subtle: { color: '#555', marginTop: 2 },
-  reason: { marginTop: 8, color: '#333' },
+  card: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#eee",
+    elevation: 2,
+  },
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  title: { fontSize: 16, fontWeight: "700" },
+  subtle: { color: "#555", marginTop: 2 },
+  reason: { marginTop: 8, color: "#333" },
 
   badge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    overflow: 'hidden',
+    overflow: "hidden",
     fontSize: 12,
-    fontWeight: '700',
-    alignSelf: 'flex-start',
+    fontWeight: "700",
+    alignSelf: "flex-start",
   },
 
-  actionsRow: { flexDirection: 'row', gap: 12, marginTop: 10 },
-  actionBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1 },
-  approveBtn: { backgroundColor: '#e8f5e9', borderColor: '#81c784' },
-  rejectBtn: { backgroundColor: '#ffebee', borderColor: '#e57373' },
-  actionBtnText: { fontWeight: '700' },
+  actionsRow: { flexDirection: "row", gap: 12, marginTop: 10 },
+  actionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  approveBtn: { backgroundColor: "#e8f5e9", borderColor: "#81c784" },
+  rejectBtn: { backgroundColor: "#ffebee", borderColor: "#e57373" },
+  actionBtnText: { fontWeight: "700" },
 
   loadMoreBtn: {
-    alignSelf: 'center', marginTop: 8, paddingHorizontal: 16, paddingVertical: 8,
-    borderWidth: 1, borderColor: '#cfd8dc', borderRadius: 8, backgroundColor: '#eceff1',
+    alignSelf: "center",
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#cfd8dc",
+    borderRadius: 8,
+    backgroundColor: "#eceff1",
   },
 
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.25)', justifyContent: 'center', padding: 20 },
-  modalCard: { backgroundColor: '#fff', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#eee' },
-  modalInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, minHeight: 90, backgroundColor: '#fafafa', marginBottom: 14 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    minHeight: 90,
+    backgroundColor: "#fafafa",
+    marginBottom: 14,
+  },
   modalBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 },
 });

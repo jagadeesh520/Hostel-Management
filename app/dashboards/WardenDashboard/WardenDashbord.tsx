@@ -341,7 +341,8 @@ export default function WardenDashboard() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ paddingBottom: 80 }} >
         {/* Quick Actions */}
         <View style={styles.quickRow}>
           <TouchableOpacity
@@ -394,7 +395,7 @@ export default function WardenDashboard() {
           <Card
             title="Leaves"
             value={leavesPendingCount}
-            color="#10B981"
+            color="#8B5CF6"
             icon="calendar-clock"
             onPress={() =>
               router.push("/dashboards/WardenDashboard/WardenLeaveDashboard")
@@ -410,8 +411,8 @@ export default function WardenDashboard() {
             }
           />
           <Card
-            title="Room "
-            value="Allot"
+            title="Rooms"
+            value={wardens.length}
             color="#3B82F6"
             icon="bed-outline"
             onPress={() =>
@@ -419,10 +420,10 @@ export default function WardenDashboard() {
             }
           />
           <Card
-            title="Hostel"
-            value={wardens.length}
-            color="#6FCF97"
-            icon="office-building"
+            title="Hostels"
+            value="Details"
+            color="#FBBF24"
+            icon="home-city"
             onPress={() =>
               router.push("/dashboards/WardenDashboard/WardenHostelView")
             }

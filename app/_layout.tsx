@@ -129,6 +129,7 @@ export default function RootLayout() {
             { name: "dashboards/WardenDashboard/StudentList", title: "Take Attendance" },
             { name: "dashboards/WardenDashboard/WardenHostelView", title: "Warden Hostel View" },
             { name: "dashboards/WardenDashboard/WardenLeaveDashboard", title: "Leave Request" },
+            { name: "dashboards/WardenDashboard/WardenAddFloor", title: "Rooms Allot" },
             { name: "dashboards/StudentDashboard/Student", title: "Student Dashboard" },
             { name: "dashboards/StudentDashboard/TimesheetScreen", title: "Timesheet" },
             { name: "dashboards/StudentDashboard/RaiseTicket", title: "Raise a Ticket" },
