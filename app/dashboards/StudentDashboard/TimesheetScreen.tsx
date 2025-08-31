@@ -156,6 +156,27 @@ const TimesheetScreen = () => {
 
   // debug
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [messOverdue, setMessOverdue] = useState(0);
+  const [estOverdue, setEstOverdue] = useState(0);
+
+  useEffect(() => {
+    if (!rollNo) return;
+    (async () => {
+      try {
+        const messRes = await axios.get(
+          `${API_BASE_URL}/api/mess/dues/${rollNo}`
+        );
+        setMessOverdue(messRes.data?.due || 0);
+
+        const estRes = await axios.get(
+          `${API_BASE_URL}/api/establishment/dues/${rollNo}`
+        );
+        setEstOverdue(estRes.data?.due || 0);
+      } catch (err) {
+        console.error("Overdue fetch failed", err);
+      }
+    })();
+  }, [rollNo]);
 
   // Load identity basics
   useEffect(() => {
@@ -279,7 +300,6 @@ const TimesheetScreen = () => {
 
       // ---- rates (extended)
       let ratesData: any = null;
-      // be tolerant to 0/1-based month on server
       const tryUrls = [
         `${API_BASE_URL}/api/adminRates/rate?month=${month}&year=${year}`,
         `${API_BASE_URL}/api/adminRates/rate?month=${String(month).padStart(
@@ -325,11 +345,24 @@ const TimesheetScreen = () => {
       setMessAmount(mess);
       setEstablishmentAmount(estAmount);
 
-      // pay availability: allow from next month 1st
+      // today's date
       const now = new Date();
-      const nextMonthStart = new Date(year, month, 1); // JS Date uses 0-based month, so this is next month
+
+      // check if selected month is before current month
+      const isPastMonth =
+        year < now.getFullYear() ||
+        (year === now.getFullYear() && month < now.getMonth() + 1);
+
+      if (isPastMonth) {
+        // Add this month's calculated bill to overdue
+        setMessOverdue((prev) => prev + mess);
+        setEstOverdue((prev) => prev + estAmount);
+      }
+
+      // pay availability: only allow starting from the next month
+      const nextMonthStart = new Date(year, month, 1);
       setCanPayMess(now >= nextMonthStart);
-      setCanPayEst(now >= nextMonthStart); // adjust if establishment can be paid anytime
+      setCanPayEst(now >= nextMonthStart);
 
       setDebugInfo({
         month,
@@ -366,7 +399,8 @@ const TimesheetScreen = () => {
         return;
       }
 
-      const amount = kind === "mess" ? messAmount : establishmentAmount;
+      const amount = kind === "mess" ? messOverdue : estOverdue;
+
       if (!amount || amount <= 0) {
         alert("Amount is zero or invalid.");
         return;
@@ -508,48 +542,63 @@ const TimesheetScreen = () => {
             <Text>₹{messRatePerDay}</Text>
           </View>
 
+          {/* Show current month bill separately (just info) */}
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              Current Mess Bill: ₹{messAmount}
+            </Text>
+            <Text style={styles.infoText}>
+              Current Establishment Charges: ₹{establishmentAmount}
+            </Text>
+          </View>
+
+          {/* Mess Overdue Box */}
           <View style={[styles.card, { borderColor: "#00C853" }]}>
-            <Text style={styles.cardTitle}>Mess Bill</Text>
+            <Text style={styles.cardTitle}>Mess Overdue</Text>
             <View style={styles.summaryRow}>
               <Text>Amount</Text>
-              <Text style={styles.amount}>₹{messAmount}</Text>
+              <Text style={{ color: messOverdue > 0 ? "red" : "green" }}>
+                ₹{messOverdue}
+              </Text>
             </View>
             <TouchableOpacity
               style={[
                 styles.payButton,
-                { backgroundColor: canPayMess ? "#00C853" : "#ccc" },
+                { backgroundColor: messOverdue > 0 ? "#00C853" : "#ccc" },
               ]}
-              disabled={!canPayMess}
+              disabled={messOverdue <= 0}
               onPress={() => openPayModal("mess")}
             >
               <Text style={styles.payButtonText}>
-                {canPayMess ? "Pay Mess Bill" : "Available After Month End"}
+                {messOverdue > 0 ? "Pay Overdue" : "No Overdue"}
               </Text>
             </TouchableOpacity>
           </View>
 
+          {/* Establishment Overdue Box */}
           <View style={[styles.card, { borderColor: "#2196f3" }]}>
-            <Text style={styles.cardTitle}>Establishment Charges</Text>
+            <Text style={styles.cardTitle}>Establishment Overdue</Text>
             <View style={styles.summaryRow}>
-              <Text>({studentYear || "Year"})</Text>
-              <Text style={styles.amount}>₹{establishmentAmount}</Text>
+              <Text>Amount</Text>
+              <Text style={{ color: estOverdue > 0 ? "red" : "green" }}>
+                ₹{estOverdue}
+              </Text>
             </View>
             <TouchableOpacity
               style={[
                 styles.payButton,
-                { backgroundColor: canPayEst ? "#2196f3" : "#ccc" },
+                { backgroundColor: estOverdue > 0 ? "#2196f3" : "#ccc" },
               ]}
-              disabled={!canPayEst}
+              disabled={estOverdue <= 0}
               onPress={() => openPayModal("establishment")}
             >
               <Text style={styles.payButtonText}>
-                {canPayEst ? "Pay Establishment" : "Available After Month End"}
+                {estOverdue > 0 ? "Pay Overdue" : "No Overdue"}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
-
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -562,7 +611,7 @@ const TimesheetScreen = () => {
               {payKind === "mess" ? "Mess Bill" : "Establishment"} Payment
             </Text>
             <Text>
-              Amount: ₹{payKind === "mess" ? messAmount : establishmentAmount}
+              Amount: ₹{payKind === "mess" ? messOverdue : estOverdue}
             </Text>
             <Text>Proceed to UPI?</Text>
 
@@ -670,6 +719,20 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   debugTitle: { fontWeight: "bold", marginBottom: 4 },
+  infoBox: {
+    marginTop: 10,
+    marginBottom: 10,
+    padding: 10,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#ddd",
+  },
+  infoText: {
+    fontSize: 14,
+    color: "#333",
+    marginBottom: 4,
+  },
 });
 
 export default TimesheetScreen;
