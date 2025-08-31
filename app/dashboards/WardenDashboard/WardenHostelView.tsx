@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import { FontAwesome5 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -13,7 +14,7 @@ import {
     View,
 } from "react-native";
 
-const API_BASE = "https://api.sjtechsol.com/api/hostels";
+//const API_BASE = `${API_BASE_URL}/api/hostels";
 
 export default function WardenHostelView() {
   const [blocks, setBlocks] = useState<any[]>([]);
@@ -29,7 +30,7 @@ export default function WardenHostelView() {
     try {
       setLoading(true);
       const token = await AsyncStorage.getItem("wardenToken");
-      const res = await axios.get(`${API_BASE}/create`, {
+      const res = await axios.get(`${API_BASE_URL}/api/hostels/create`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setBlocks([...res.data.Boys, ...res.data.Girls]);

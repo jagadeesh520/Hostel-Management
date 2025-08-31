@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -86,7 +87,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       const res = await axios.get(
-        `https://api.sjtechsol.com/api/students/filter?block=${blockName}`,
+        `${API_BASE_URL}/api/students/filter?block=${blockName}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -104,7 +105,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       const date = new Date().toISOString().split("T")[0];
 
       const res = await axios.get(
-        `https://api.sjtechsol.com/api/attendance/list?date=${date}&block=${encodeURIComponent(
+        `${API_BASE_URL}/api/attendance/list?date=${date}&block=${encodeURIComponent(
           blockName
         )}`,
         {
@@ -149,7 +150,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1);
 
       await axios.post(
-        "https://api.sjtechsol.com/api/attendance/mark",
+        `${API_BASE_URL}/api/attendance/mark`,
         {
           studentId: student._id,
           status: formattedStatus,

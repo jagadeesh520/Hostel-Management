@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
@@ -62,7 +63,6 @@ interface NewPost {
   isPublished: boolean;
 }
 
-const API_BASE_URL = "https://api.sjtechsol.com/api"; // Base API URL
 const { width, height } = Dimensions.get("window");
 
 const BlogScreen = () => {
@@ -106,7 +106,7 @@ const BlogScreen = () => {
       : imagePath;
 
     // Construct the correct URL
-    return `https://api.sjtechsol.com/${cleanPath}`;
+    return `${API_BASE_URL}/${cleanPath}`;
   };
 
   useEffect(() => {
@@ -128,7 +128,7 @@ const BlogScreen = () => {
 
   const fetchPosts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/blog`);
+      const response = await fetch(`${API_BASE_URL}/api/blog`);
       console.log("response", response);
 
       if (!response.ok) {
@@ -192,7 +192,7 @@ const BlogScreen = () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      const response = await fetch(`${API_BASE_URL}/blog`, {
+      const response = await fetch(`${API_BASE_URL}/api/blog`, {
         method: "POST",
         body: formData,
         signal: controller.signal,
@@ -233,7 +233,7 @@ const BlogScreen = () => {
 
   const handleLike = async (postId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/blog/${postId}/like`, {
+      const response = await fetch(`${API_BASE_URL}/api/blog/${postId}/like`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -263,7 +263,7 @@ const BlogScreen = () => {
     if (!commentText.trim()) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/blog/${postId}/comment`, {
+      const response = await fetch(`${API_BASE_URL}/api/blog/${postId}/comment`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -295,7 +295,7 @@ const BlogScreen = () => {
 
   const fetchPostById = async (postId: string): Promise<BlogPost | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/blog/${postId}`);
+      const response = await fetch(`${API_BASE_URL}/api/blog/${postId}`);
 
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}`);

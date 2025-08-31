@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
@@ -68,7 +69,7 @@ const RaiseTicketScreen = () => {
     console.log("formData", formData);
     try {
       const res = await axios.post(
-        "https://api.sjtechsol.com/api/issueTicket/tickets",
+        `${API_BASE_URL}/api/issueTicket/tickets`,
         formData,
         {
           headers: {

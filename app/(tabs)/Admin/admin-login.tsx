@@ -1,4 +1,5 @@
 // AdminLogin.tsx
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -71,7 +72,7 @@ export default function AdminLogin() {
       setLoading(true);
       Keyboard.dismiss();
 
-      const response = await fetch("https://api.sjtechsol.com/api/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

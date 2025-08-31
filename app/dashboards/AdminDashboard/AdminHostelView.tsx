@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import { FontAwesome5 } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -13,7 +14,7 @@ import {
 } from "react-native";
 import Dialog from "react-native-dialog";
 
-const API_BASE = "https://api.sjtechsol.com/api/hostels";
+const API_BASE = `${API_BASE_URL}/api/hostels`;
 
 export default function AdminHostelView() {
   const [blocks, setBlocks] = useState<any[]>([]);

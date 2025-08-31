@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -239,7 +240,7 @@ export const FaceModalScanner = ({
     formData.append("rollNo", student.rollNo);
 
     const sendRequest = async () => {
-      return axios.post("https://api.sjtechsol.com/api/attendance/recognize", formData, {
+      return axios.post(`${API_BASE_URL}api/attendance/recognize`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 15000,
       });

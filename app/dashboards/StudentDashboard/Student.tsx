@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
@@ -85,7 +86,7 @@ export default function StudentDashboard() {
       if (token?.trim() && rollNo?.trim()) {
         try {
           const res = await fetch(
-            `https://api.sjtechsol.com/api/studentAuth/roll/${rollNo}`,
+            `${API_BASE_URL}/api/studentAuth/roll/${rollNo}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,

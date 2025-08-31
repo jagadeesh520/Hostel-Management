@@ -1,4 +1,5 @@
 // AttendanceScanner.tsx
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -129,7 +130,7 @@ export default function AttendanceScanner() {
 
         // Fetch campus info
         const res = await fetch(
-          "https://api.sjtechsol.com/api/campusLocation/JNTUACEP"
+          `${API_BASE_URL}/api/campusLocation/JNTUACEP`
         );
         if (!res.ok) throw new Error("Failed to fetch campus location");
         const json = await res.json();
@@ -183,7 +184,7 @@ export default function AttendanceScanner() {
       const today = new Date().toISOString().split("T")[0];
       const rollNo = student.rollNo;
       const res = await fetch(
-        `https://api.sjtechsol.com/api/studentAuth/check/${rollNo}?date=${today}`,
+        `${API_BASE_URL}/api/studentAuth/check/${rollNo}?date=${today}`,
         { headers: { Accept: "application/json" } }
       );
 

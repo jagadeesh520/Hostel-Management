@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import * as Location from "expo-location";
 import { useEffect, useState } from "react";
 import {
@@ -48,7 +49,7 @@ export default function CampusMapPicker() {
 
     try {
       const response = await fetch(
-        "https://api.sjtechsol.com/api/campusLocation",
+        `${API_BASE_URL}/api/campusLocation`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

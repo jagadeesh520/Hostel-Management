@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -120,7 +121,7 @@ export default function ViewStudents() {
     const fetchStudents = async () => {
       try {
         const token = await AsyncStorage.getItem("adminToken");
-        const response = await fetch("https://api.sjtechsol.com/api/students", {
+        const response = await fetch(`${API_BASE_URL}/api/students`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -190,7 +191,7 @@ export default function ViewStudents() {
     });
 
     try {
-      const res = await fetch(`https://api.sjtechsol.com/api/students/${selectedStudent._id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/students/${selectedStudent._id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

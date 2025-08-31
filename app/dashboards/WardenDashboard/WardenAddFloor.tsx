@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -13,7 +14,7 @@ import {
     View,
 } from "react-native";
 
-const API_BASE = "https://api.sjtechsol.com/api/hostels";
+//const API_BASE = `${API_BASE_URL}/api/hostels";
 
 interface Bed {
   bedNumber: number;
@@ -50,7 +51,7 @@ export default function WardenAddFloor() {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       const res = await axios.get<{ Boys: Block[]; Girls: Block[] }>(
-        `${API_BASE}/create`,
+        `${API_BASE_URL}/api/hostels/create`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setBlocks([...res.data.Boys, ...res.data.Girls]);
@@ -96,7 +97,7 @@ export default function WardenAddFloor() {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       await axios.post(
-        `${API_BASE}/warden/add-floor`,
+        `${API_BASE_URL}/api/hostels/warden/add-floor`,
         { blockName: selectedBlock.name, floors: preview },
         { headers: { Authorization: `Bearer ${token}` } }
       );

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import { useState } from "react";
@@ -58,7 +59,7 @@ export default function StudentUploadScreen() {
       }
 
       const response = await fetch(
-        "https://api.sjtechsol.com/api/students/upload",
+        `${API_BASE_URL}/api/students/upload`,
         {
           method: "POST",
           headers: {

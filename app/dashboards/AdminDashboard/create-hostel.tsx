@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from "react";
 import {
@@ -42,7 +43,7 @@ export default function CreateHostel() {
         const token = await AsyncStorage.getItem("adminToken");
         if (!token) return;
 
-        const response = await fetch("https://api.sjtechsol.com/api/hostels/create", {
+        const response = await fetch(`${API_BASE_URL}/api/hostels/create`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -124,7 +125,7 @@ export default function CreateHostel() {
         return;
       }
 
-      const response = await fetch("https://api.sjtechsol.com/api/hostels/update", {
+      const response = await fetch(`${API_BASE_URL}/api/hostels/update`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

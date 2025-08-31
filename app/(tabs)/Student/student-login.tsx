@@ -1,4 +1,5 @@
 // StudentLogin.tsx
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -51,7 +52,7 @@ export default function StudentLogin() {
       Keyboard.dismiss();
 
       const response = await fetch(
-        "https://api.sjtechsol.com/api/studentAuth/login",
+        `${API_BASE_URL}/api/studentAuth/login`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -132,7 +133,7 @@ export default function StudentLogin() {
       
       // Try student password reset first
       let response = await fetch(
-        "https://api.sjtechsol.com/api/studentAuth/forgot-password",
+        `${API_BASE_URL}/api/studentAuth/forgot-password`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -153,7 +154,7 @@ export default function StudentLogin() {
       } else {
         // If student reset fails, try admin
         response = await fetch(
-          "https://api.sjtechsol.com/api/adminAuth/forgot-password",
+          `${API_BASE_URL}/api/adminAuth/forgot-password`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -174,7 +175,7 @@ export default function StudentLogin() {
         } else {
           // If admin reset fails, try warden
           response = await fetch(
-            "https://api.sjtechsol.com/api/wardenAuth/forgot-password",
+            `${API_BASE_URL}/api/wardenAuth/forgot-password`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

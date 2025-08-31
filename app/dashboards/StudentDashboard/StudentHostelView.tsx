@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -10,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-const API_BASE = "https://api.sjtechsol.com/api/hostels";
+//const API_BASE = `${API_BASE_URL}/api/hostels";
 
 export default function StudentHostelView() {
   const [assignedBlock, setAssignedBlock] = useState<any | null>(null);
@@ -29,7 +30,7 @@ export default function StudentHostelView() {
       const token = await AsyncStorage.getItem("studentToken");
       if (!rollNo || !token) return;
 
-      const res = await axios.get(`${API_BASE}/student/assigned-block/${rollNo}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/hostels/student/assigned-block/${rollNo}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -47,7 +48,7 @@ export default function StudentHostelView() {
       const token = await AsyncStorage.getItem("studentToken");
       if (!rollNo || !token) return;
 
-      const res = await axios.get(`${API_BASE}/student/my-booking/${rollNo}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/hostels/student/my-booking/${rollNo}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -64,7 +65,7 @@ export default function StudentHostelView() {
       const rollNo = await AsyncStorage.getItem("rollNo");
 
       await axios.post(
-        `${API_BASE}/student/book-bed`,
+        `${API_BASE_URL}/api/hostels/student/book-bed`,
         { blockName: assignedBlock.blockName, roomNumber, bedNumber, rollNo },
         { headers: { Authorization: `Bearer ${token}` } }
       );

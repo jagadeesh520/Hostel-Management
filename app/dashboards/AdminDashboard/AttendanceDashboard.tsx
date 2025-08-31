@@ -1,4 +1,5 @@
 // screens/AttendanceDashboard.tsx
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -87,7 +88,7 @@ const AttendanceDashboard = () => {
       if (!token) return;
 
       const res = await axios.get(
-        "https://api.sjtechsol.com/api/hostels/attendanceList",
+        `${API_BASE_URL}/api/hostels/attendanceList`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

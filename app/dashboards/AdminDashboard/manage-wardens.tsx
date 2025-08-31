@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import axios, { AxiosError } from "axios";
@@ -36,7 +37,7 @@ export default function ManageWardens() {
       }
 
       const res = await axios.get(
-        "https://api.sjtechsol.com/api/hostels/create",
+        `${API_BASE_URL}/api/hostels/create`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -69,7 +70,7 @@ export default function ManageWardens() {
   const fetchWardens = async () => {
     try {
       const token = await AsyncStorage.getItem("adminToken");
-      const res = await axios.get("https://api.sjtechsol.com/api/wardens", {
+      const res = await axios.get(`${API_BASE_URL}/api/wardens`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -119,8 +120,8 @@ export default function ManageWardens() {
       };
 
       const url = isEditing
-        ? `https://api.sjtechsol.com/api/wardens/${editId}` // ✅ PUT with id
-        : "https://api.sjtechsol.com/api/wardens"; // ✅ POST for new
+        ? `${API_BASE_URL}/api/wardens/${editId}` // ✅ PUT with id
+        : `${API_BASE_URL}/api/wardens`; // ✅ POST for new
 
       const method = isEditing ? "put" : "post";
 

@@ -1,4 +1,5 @@
 // screens/BulkUploadStudents.tsx
+import { API_BASE_URL } from "@/constants/config";
 import axios from "axios";
 import * as DocumentPicker from "expo-document-picker";
 import { useState } from "react";
@@ -56,7 +57,7 @@ const BulkUploadStudents = () => {
 
     try {
       const res = await axios.post(
-        "https://api.sjtechsol.com/api/students/bulk-upload-students",
+        `${API_BASE_URL}/api/students/bulk-upload-students`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

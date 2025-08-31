@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import * as TaskManager from "expo-task-manager";
@@ -41,7 +42,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       time: location.timestamp,
     });
 
-    await fetch("https://api.sjtechsol.com/api/attendance/location/update", {
+    await fetch(`${API_BASE_URL}/api/attendance/location/update`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

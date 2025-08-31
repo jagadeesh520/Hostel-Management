@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useRouter } from "expo-router";
@@ -16,7 +17,7 @@ export default function BlocksChild() {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       if (!token) return Alert.alert("Error", "Warden not logged in.");
-      const res = await axios.get("https://api.sjtechsol.com/api/wardens", {
+      const res = await axios.get(`${API_BASE_URL}/api/wardens`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setWardens(res.data || []);

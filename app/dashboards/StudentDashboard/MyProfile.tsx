@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
@@ -44,7 +45,7 @@ const StudentProfile = () => {
       if (!rollNo) return;
 
       const res = await axios.get(
-        `https://api.sjtechsol.com/api/studentAuth/roll/${rollNo}`
+        `${API_BASE_URL}/api/studentAuth/roll/${rollNo}`
       );
       setStudent(res.data);
     } catch (err) {
@@ -89,7 +90,7 @@ const StudentProfile = () => {
 
       try {
         await axios.put(
-          `https://api.sjtechsol.com/api/students/upload-face-image/${rollNo}`,
+          `${API_BASE_URL}/api/students/upload-face-image/${rollNo}`,
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
@@ -110,7 +111,7 @@ const StudentProfile = () => {
     }
 
     try {
-      await axios.post("https://api.sjtechsol.com/api/studentAuth/change-password", {
+      await axios.post(`${API_BASE_URL}/api/studentAuth/change-password`, {
         rollNo,
         oldPassword,
         newPassword,

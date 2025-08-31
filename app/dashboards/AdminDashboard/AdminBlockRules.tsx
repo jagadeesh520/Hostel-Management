@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -13,7 +14,7 @@ import {
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 
-const API_BASE = "https://api.sjtechsol.com/api/hostels";
+const API_BASE = `${API_BASE_URL}/api/hostels`;
 
 export default function AdminBlockRules() {
   const [rules, setRules] = useState<any[]>([]);
