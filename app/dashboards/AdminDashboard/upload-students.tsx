@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FlatList,
   Linking,
@@ -58,7 +58,7 @@ export default function StudentUploadScreen() {
       }
 
       const response = await fetch(
-        "http://192.168.29.83:5000/api/students/upload",
+        "https://api.sjtechsol.com/api/students/upload",
         {
           method: "POST",
           headers: {

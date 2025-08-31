@@ -85,7 +85,7 @@ export default function StudentDashboard() {
       if (token?.trim() && rollNo?.trim()) {
         try {
           const res = await fetch(
-            `http://192.168.29.83:5000/api/studentAuth/roll/${rollNo}`,
+            `https://api.sjtechsol.com/api/studentAuth/roll/${rollNo}`,
             {
               headers: {
                 Authorization: `Bearer ${token}`,
@@ -206,7 +206,7 @@ export default function StudentDashboard() {
         <View style={styles.profileSection}>
           {student?.faceImage && !imageError ? (
             <Image
-              source={{ uri: `http://192.168.29.83:5000${student.faceImage}` }}
+              source={{ uri: `https://api.sjtechsol.com${student.faceImage}` }}
               style={styles.avatar}
               onError={() => setImageError(true)}
             />

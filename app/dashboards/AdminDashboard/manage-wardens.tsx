@@ -1,15 +1,15 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import axios, { AxiosError } from "axios";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 
@@ -36,7 +36,7 @@ export default function ManageWardens() {
       }
 
       const res = await axios.get(
-        "http://192.168.29.83:5000/api/hostels/create",
+        "https://api.sjtechsol.com/api/hostels/create",
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -69,7 +69,7 @@ export default function ManageWardens() {
   const fetchWardens = async () => {
     try {
       const token = await AsyncStorage.getItem("adminToken");
-      const res = await axios.get("http://192.168.29.83:5000/api/wardens", {
+      const res = await axios.get("https://api.sjtechsol.com/api/wardens", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -119,8 +119,8 @@ export default function ManageWardens() {
       };
 
       const url = isEditing
-        ? `http://192.168.29.83:5000/api/wardens/${editId}` // ✅ PUT with id
-        : "http://192.168.29.83:5000/api/wardens"; // ✅ POST for new
+        ? `https://api.sjtechsol.com/api/wardens/${editId}` // ✅ PUT with id
+        : "https://api.sjtechsol.com/api/wardens"; // ✅ POST for new
 
       const method = isEditing ? "put" : "post";
 

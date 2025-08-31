@@ -2,15 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { ImagePickerAsset } from "expo-image-picker";
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-    Alert,
-    Image,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 
@@ -68,7 +68,7 @@ const RaiseTicketScreen = () => {
     console.log("formData", formData);
     try {
       const res = await axios.post(
-        "http://192.168.29.83:5000/api/issueTicket/tickets",
+        "https://api.sjtechsol.com/api/issueTicket/tickets",
         formData,
         {
           headers: {

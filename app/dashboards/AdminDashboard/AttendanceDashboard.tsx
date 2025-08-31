@@ -2,7 +2,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -87,7 +87,7 @@ const AttendanceDashboard = () => {
       if (!token) return;
 
       const res = await axios.get(
-        "http://192.168.29.83:5000/api/hostels/attendanceList",
+        "https://api.sjtechsol.com/api/hostels/attendanceList",
         { headers: { Authorization: `Bearer ${token}` } }
       );
 

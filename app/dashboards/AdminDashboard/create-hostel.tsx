@@ -42,7 +42,7 @@ export default function CreateHostel() {
         const token = await AsyncStorage.getItem("adminToken");
         if (!token) return;
 
-        const response = await fetch("http://192.168.29.83:5000/api/hostels/create", {
+        const response = await fetch("https://api.sjtechsol.com/api/hostels/create", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -124,7 +124,7 @@ export default function CreateHostel() {
         return;
       }
 
-      const response = await fetch("http://192.168.29.83:5000/api/hostels/update", {
+      const response = await fetch("https://api.sjtechsol.com/api/hostels/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

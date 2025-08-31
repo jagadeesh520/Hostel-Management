@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_URL = 'http://192.168.29.83:5000';
+const API_URL = 'https://api.sjtechsol.com';
 
 type LeaveItem = {
   _id: string;

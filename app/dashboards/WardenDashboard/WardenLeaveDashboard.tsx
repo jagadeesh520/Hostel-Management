@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = "http://192.168.29.83:5000";
+const API_URL = "https://api.sjtechsol.com";
 const WARDEN_API = `${API_URL}/api/leave`; // adjust if mounted elsewhere
 
 type Status = "pending" | "approved" | "rejected";
@@ -317,7 +317,7 @@ export default function WardenLeaveDashboard() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
       {/* Header */}
-      <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
+      <View style={{ paddingHorizontal: 16, paddingTop: 2 }}>
         <Text style={{ fontSize: 22, fontWeight: "800" }}>
           All Leave Requests
         </Text>

@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -62,7 +62,7 @@ interface NewPost {
   isPublished: boolean;
 }
 
-const API_BASE_URL = "http://192.168.29.83:5000/api"; // Base API URL
+const API_BASE_URL = "https://api.sjtechsol.com/api"; // Base API URL
 const { width, height } = Dimensions.get("window");
 
 const BlogScreen = () => {
@@ -106,7 +106,7 @@ const BlogScreen = () => {
       : imagePath;
 
     // Construct the correct URL
-    return `http://192.168.29.83:5000/${cleanPath}`;
+    return `https://api.sjtechsol.com/${cleanPath}`;
   };
 
   useEffect(() => {

@@ -1,14 +1,14 @@
 import * as Location from "expo-location";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Dimensions,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import type { Region } from "react-native-maps";
 import MapView, { Circle, Marker } from "react-native-maps";
@@ -48,7 +48,7 @@ export default function CampusMapPicker() {
 
     try {
       const response = await fetch(
-        "http://192.168.29.83:5000/api/campusLocation",
+        "https://api.sjtechsol.com/api/campusLocation",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

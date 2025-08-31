@@ -129,7 +129,7 @@ export default function AttendanceScanner() {
 
         // Fetch campus info
         const res = await fetch(
-          "http://192.168.29.83:5000/api/campusLocation/JNTUACEP"
+          "https://api.sjtechsol.com/api/campusLocation/JNTUACEP"
         );
         if (!res.ok) throw new Error("Failed to fetch campus location");
         const json = await res.json();
@@ -183,7 +183,7 @@ export default function AttendanceScanner() {
       const today = new Date().toISOString().split("T")[0];
       const rollNo = student.rollNo;
       const res = await fetch(
-        `http://192.168.29.83:5000/api/studentAuth/check/${rollNo}?date=${today}`,
+        `https://api.sjtechsol.com/api/studentAuth/check/${rollNo}?date=${today}`,
         { headers: { Accept: "application/json" } }
       );
 

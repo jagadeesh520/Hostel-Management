@@ -41,7 +41,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       time: location.timestamp,
     });
 
-    await fetch("http://192.168.29.83:5000/api/attendance/location/update", {
+    await fetch("https://api.sjtechsol.com/api/attendance/location/update", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

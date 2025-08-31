@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Alert,
     FlatList,
@@ -27,7 +27,7 @@ type Ticket = {
   assignedWarden?: string | { _id: string; name?: string; block?: string };
 };
 
-const BASE = "http://192.168.29.83:5000";
+const BASE = "https://api.sjtechsol.com";
 type FilterKey = "all" | "assigned" | "pending" | "wardenfixed" | "resolved";
 
 export default function WardenTickets() {

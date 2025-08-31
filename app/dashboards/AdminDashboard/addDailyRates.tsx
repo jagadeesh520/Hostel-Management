@@ -11,7 +11,7 @@ import {
   View,
 } from "react-native";
 
-const API_BASE = "http://192.168.29.83:5000";
+const API_BASE = "https://api.sjtechsol.com";
 
 const num = (v: string | number | undefined | null) => {
   const n = typeof v === "string" ? parseInt(v) : Number(v);

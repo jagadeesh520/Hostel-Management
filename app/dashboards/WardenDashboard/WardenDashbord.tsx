@@ -58,7 +58,7 @@ type LeaveItem = {
   };
 };
 
-const BASE_URL = "http://192.168.29.83:5000";
+const BASE_URL = "https://api.sjtechsol.com";
 
 // ---------- helpers ----------
 const shortDate = (iso?: string) => (iso ? new Date(iso).toDateString() : "");

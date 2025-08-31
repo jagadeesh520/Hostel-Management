@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -120,7 +120,7 @@ export default function ViewStudents() {
     const fetchStudents = async () => {
       try {
         const token = await AsyncStorage.getItem("adminToken");
-        const response = await fetch("http://192.168.29.83:5000/api/students", {
+        const response = await fetch("https://api.sjtechsol.com/api/students", {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -190,7 +190,7 @@ export default function ViewStudents() {
     });
 
     try {
-      const res = await fetch(`http://192.168.29.83:5000/api/students/${selectedStudent._id}`, {
+      const res = await fetch(`https://api.sjtechsol.com/api/students/${selectedStudent._id}`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

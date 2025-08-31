@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import Dialog from "react-native-dialog";
 
-const API_BASE = "http://192.168.29.83:5000/api/hostels";
+const API_BASE = "https://api.sjtechsol.com/api/hostels";
 
 export default function AdminHostelView() {
   const [blocks, setBlocks] = useState<any[]>([]);

@@ -18,7 +18,7 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 
-const BASE_URL = "http://192.168.29.83:5000";
+const BASE_URL = "https://api.sjtechsol.com";
 
 export default function WardenLogin() {
   const [email, setEmail] = useState("");

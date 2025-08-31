@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { FlatList, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
@@ -12,7 +12,7 @@ export default function IssuesChild() {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       if (!token) return Alert.alert("Error", "Warden not logged in.");
-      const res = await axios.get("http://192.168.29.83:5000/api/issues", {
+      const res = await axios.get("https://api.sjtechsol.com/api/issues", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setIssues(res.data || []);

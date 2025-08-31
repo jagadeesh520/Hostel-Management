@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 
-const API_BASE = "http://192.168.29.83:5000";
+const API_BASE = "https://api.sjtechsol.com";
 
 type MarkedDateProps = {
   customStyles: {

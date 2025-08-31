@@ -2,21 +2,21 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Image,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
 type MenuItem = { name: string; category: string; imageUrl?: string | null };
 type MenuDoc = { date: string; items: MenuItem[] };
 
-const BASE_URL = "http://192.168.29.83:5000";
+const BASE_URL = "https://api.sjtechsol.com";
 
 export default function MenuChild() {
   const [menu, setMenu] = useState<MenuDoc | null>(null);

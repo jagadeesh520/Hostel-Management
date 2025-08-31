@@ -1,7 +1,7 @@
 // screens/BulkUploadStudents.tsx
 import axios from "axios";
 import * as DocumentPicker from "expo-document-picker";
-import React, { useState } from "react";
+import { useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const BulkUploadStudents = () => {
@@ -56,7 +56,7 @@ const BulkUploadStudents = () => {
 
     try {
       const res = await axios.post(
-        "http://192.168.29.83:5000/api/students/bulk-upload-students",
+        "https://api.sjtechsol.com/api/students/bulk-upload-students",
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );

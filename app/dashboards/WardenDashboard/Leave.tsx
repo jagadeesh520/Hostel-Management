@@ -26,7 +26,7 @@ type LeaveItem = {
   student?: { _id: string; name?: string; email?: string; rollNo?: string };
 };
 
-const BASE_URL = "http://192.168.29.83:5000";
+const BASE_URL = "https://api.sjtechsol.com";
 const PAGE_SIZE = 12;
 const TABS = ["all", "pending", "approved", "rejected"] as const;
 type Tab = typeof TABS[number];

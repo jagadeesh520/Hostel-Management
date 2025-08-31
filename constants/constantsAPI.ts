@@ -1,1 +1,1 @@
-  const BASE="http://192.168.29.83:5000"
+  const BASE="https://api.sjtechsol.com"

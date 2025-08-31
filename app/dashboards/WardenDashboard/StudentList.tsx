@@ -86,7 +86,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       const res = await axios.get(
-        `http://192.168.29.83:5000/api/students/filter?block=${blockName}`,
+        `https://api.sjtechsol.com/api/students/filter?block=${blockName}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -104,7 +104,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       const date = new Date().toISOString().split("T")[0];
 
       const res = await axios.get(
-        `http://192.168.29.83:5000/api/attendance/list?date=${date}&block=${encodeURIComponent(
+        `https://api.sjtechsol.com/api/attendance/list?date=${date}&block=${encodeURIComponent(
           blockName
         )}`,
         {
@@ -149,7 +149,7 @@ export const StudentList = ({ blockName }: { blockName: string }) => {
       const formattedStatus = status.charAt(0).toUpperCase() + status.slice(1);
 
       await axios.post(
-        "http://192.168.29.83:5000/api/attendance/mark",
+        "https://api.sjtechsol.com/api/attendance/mark",
         {
           studentId: student._id,
           status: formattedStatus,

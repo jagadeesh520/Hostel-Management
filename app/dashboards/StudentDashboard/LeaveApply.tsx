@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const API_URL = 'http://192.168.29.83:5000';
+const API_URL = 'https://api.sjtechsol.com';
 const BUTTON_HEIGHT = 56;
 
 type LeaveItem = {

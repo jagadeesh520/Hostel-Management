@@ -20,7 +20,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 type MenuItem = { name: string; category: string; imageUri?: string | null };
 
 const CATEGORIES = ["Veg", "NonVeg"];
-const BASE_URL = "http://192.168.29.83:5000";
+const BASE_URL = "https://api.sjtechsol.com";
 
 /** ---------- helpers ---------- */
 

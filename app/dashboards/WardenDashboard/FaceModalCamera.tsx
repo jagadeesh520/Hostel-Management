@@ -239,7 +239,7 @@ export const FaceModalScanner = ({
     formData.append("rollNo", student.rollNo);
 
     const sendRequest = async () => {
-      return axios.post("http://192.168.29.83:5000/api/attendance/recognize", formData, {
+      return axios.post("https://api.sjtechsol.com/api/attendance/recognize", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 15000,
       });

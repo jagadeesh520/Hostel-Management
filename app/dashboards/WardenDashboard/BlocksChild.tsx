@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, FlatList, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 
@@ -16,7 +16,7 @@ export default function BlocksChild() {
     try {
       const token = await AsyncStorage.getItem("wardenToken");
       if (!token) return Alert.alert("Error", "Warden not logged in.");
-      const res = await axios.get("http://192.168.29.83:5000/api/wardens", {
+      const res = await axios.get("https://api.sjtechsol.com/api/wardens", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setWardens(res.data || []);

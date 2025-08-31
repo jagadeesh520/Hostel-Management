@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 
-const API_BASE = "http://192.168.29.83:5000/api/hostels";
+const API_BASE = "https://api.sjtechsol.com/api/hostels";
 
 export default function StudentHostelView() {
   const [assignedBlock, setAssignedBlock] = useState<any | null>(null);

@@ -51,7 +51,7 @@ export default function StudentLogin() {
       Keyboard.dismiss();
 
       const response = await fetch(
-        "http://192.168.29.83:5000/api/studentAuth/login",
+        "https://api.sjtechsol.com/api/studentAuth/login",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -132,7 +132,7 @@ export default function StudentLogin() {
       
       // Try student password reset first
       let response = await fetch(
-        "http://192.168.29.83:5000/api/studentAuth/forgot-password",
+        "https://api.sjtechsol.com/api/studentAuth/forgot-password",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -153,7 +153,7 @@ export default function StudentLogin() {
       } else {
         // If student reset fails, try admin
         response = await fetch(
-          "http://192.168.29.83:5000/api/adminAuth/forgot-password",
+          "https://api.sjtechsol.com/api/adminAuth/forgot-password",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -174,7 +174,7 @@ export default function StudentLogin() {
         } else {
           // If admin reset fails, try warden
           response = await fetch(
-            "http://192.168.29.83:5000/api/wardenAuth/forgot-password",
+            "https://api.sjtechsol.com/api/wardenAuth/forgot-password",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

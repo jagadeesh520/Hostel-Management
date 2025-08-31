@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -32,7 +32,7 @@ type Ticket = {
 
 type Warden = { _id: string; name: string; block: string };
 
-const BASE = "http://192.168.29.83:5000";
+const BASE = "https://api.sjtechsol.com";
 
 const AdminTicketScreen = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);

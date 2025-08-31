@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -44,7 +44,7 @@ const StudentProfile = () => {
       if (!rollNo) return;
 
       const res = await axios.get(
-        `http://192.168.29.83:5000/api/studentAuth/roll/${rollNo}`
+        `https://api.sjtechsol.com/api/studentAuth/roll/${rollNo}`
       );
       setStudent(res.data);
     } catch (err) {
@@ -89,7 +89,7 @@ const StudentProfile = () => {
 
       try {
         await axios.put(
-          `http://192.168.29.83:5000/api/students/upload-face-image/${rollNo}`,
+          `https://api.sjtechsol.com/api/students/upload-face-image/${rollNo}`,
           formData,
           { headers: { "Content-Type": "multipart/form-data" } }
         );
@@ -110,7 +110,7 @@ const StudentProfile = () => {
     }
 
     try {
-      await axios.post("http://192.168.29.83:5000/api/studentAuth/change-password", {
+      await axios.post("https://api.sjtechsol.com/api/studentAuth/change-password", {
         rollNo,
         oldPassword,
         newPassword,
@@ -145,7 +145,7 @@ const StudentProfile = () => {
             <View style={styles.profileHeader}>
               {student.faceImage ? (
                 <Image
-                  source={{ uri: `http://192.168.29.83:5000${student.faceImage}` }}
+                  source={{ uri: `https://api.sjtechsol.com${student.faceImage}` }}
                   style={styles.faceImage}
                 />
               ) : (
