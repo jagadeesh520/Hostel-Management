@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-const API_BASE = "https://api.sjtechsol.com";
+//const API_BASE = "https://api.sjtechsol.com";
 
 const num = (v: string | number | undefined | null) => {
   const n = typeof v === "string" ? parseInt(v) : Number(v);
@@ -109,7 +110,7 @@ const MessFeeCalculator = () => {
 
   const fetchExistingRate = async () => {
     try {
-      const url = `${API_BASE}/api/adminRates/rate?month=${month}&year=${year}`;
+      const url = `${API_BASE_URL}/api/adminRates/rate?month=${month}&year=${year}`;
       const res = await axios.get(url);
       const rate = res.data || {};
 
@@ -189,8 +190,8 @@ const MessFeeCalculator = () => {
 
       setLoading(true);
       const url = existingRateId
-        ? `${API_BASE}/api/adminRates/update-daily-rate/${existingRateId}`
-        : `${API_BASE}/api/adminRates/set-daily-rate`;
+        ? `${API_BASE_URL}/api/adminRates/update-daily-rate/${existingRateId}`
+        : `${API_BASE_URL}/api/adminRates/set-daily-rate`;
       const method = existingRateId ? "put" : "post";
 
       await axios[method](url, payload, {
@@ -221,7 +222,7 @@ const MessFeeCalculator = () => {
             if (!token) throw new Error("No token");
 
             await axios.delete(
-              `${API_BASE}/api/adminRates/delete-daily-rate/${existingRateId}`,
+              `${API_BASE_URL}/api/adminRates/delete-daily-rate/${existingRateId}`,
               { headers: { Authorization: `Bearer ${token}` } }
             );
 

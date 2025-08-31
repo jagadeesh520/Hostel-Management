@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
 import axios from "axios";
@@ -20,7 +21,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 type MenuItem = { name: string; category: string; imageUri?: string | null };
 
 const CATEGORIES = ["Veg", "NonVeg"];
-const BASE_URL = "https://api.sjtechsol.com";
+//const BASE_URL = "https://api.sjtechsol.com";
 
 /** ---------- helpers ---------- */
 
@@ -143,7 +144,7 @@ export default function AddMenu() {
       setSaving(true);
 
       // 0) Reachability probe (clear, early failure if LAN/bind issue)
-      const reachable = await probeServer(BASE_URL);
+      const reachable = await probeServer(`${API_BASE_URL}`);
       if (!reachable) {
         Alert.alert(
           "Cannot reach server",
@@ -196,7 +197,7 @@ export default function AddMenu() {
       });
 
       // 3) Send (explicit multipart header + RN-safe transform)
-      await axios.post(`${BASE_URL}/api/menu`, form, {
+      await axios.post(`${API_BASE_URL}/api/menu`, form, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",

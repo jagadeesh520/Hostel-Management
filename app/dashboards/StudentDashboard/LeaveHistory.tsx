@@ -1,9 +1,10 @@
+import { API_BASE_URL } from '@/constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const API_URL = 'https://api.sjtechsol.com';
+//const API_URL = 'https://api.sjtechsol.com';
 
 type LeaveItem = {
   _id: string;
@@ -39,7 +40,7 @@ export default function LeavesList() {
       if (!rollNo) return Alert.alert('Not signed in', 'Missing roll number.');
 
       // fetch enough items; you can add pagination later
-      const res = await fetch(`${API_URL}/api/leave/mine?page=1&limit=50`, {
+      const res = await fetch(`${API_BASE_URL}/api/leave/mine?page=1&limit=50`, {
         headers: {
           Authorization: `Bearer ${rollNo}`,
           'x-rollno': rollNo,
@@ -75,7 +76,7 @@ export default function LeavesList() {
           try {
             const rollNo = await AsyncStorage.getItem('rollNo');
             if (!rollNo) return Alert.alert('Not signed in', 'Missing roll number.');
-            const res = await fetch(`${API_URL}/api/leave/${id}/cancel`, {
+            const res = await fetch(`${API_BASE_URL}/api/leave/${id}/cancel`, {
               method: 'PATCH',
               headers: { Authorization: `Bearer ${rollNo}`, 'x-rollno': rollNo },
             });

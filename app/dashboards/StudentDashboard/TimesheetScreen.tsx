@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -14,7 +15,7 @@ import {
 } from "react-native";
 import { Calendar } from "react-native-calendars";
 
-const API_BASE = "https://api.sjtechsol.com";
+//const API_BASE = "https://api.sjtechsol.com";
 
 type MarkedDateProps = {
   customStyles: {
@@ -172,7 +173,7 @@ const TimesheetScreen = () => {
       // if diet/year/gender missing, try to fetch from backend student profile
       if (r && (!t || !y || !g)) {
         try {
-          const resp = await axios.get(`${API_BASE}/api/students/${r}`);
+          const resp = await axios.get(`${API_BASE_URL}/api/students/${r}`);
           const s = resp.data || {};
           if (!t && s?.type) setStudentDiet(normDiet(String(s.type)));
           if (!y && s?.year) setStudentYear(String(s.year));
@@ -228,7 +229,7 @@ const TimesheetScreen = () => {
 
       // ---- attendance
       const timesheetRes = await axios.get(
-        `${API_BASE}/api/timesheetRoutes/${rollNo}`
+        `${API_BASE_URL}/api/timesheetRoutes/${rollNo}`
       );
       const tData = timesheetRes.data || {};
 
@@ -280,12 +281,12 @@ const TimesheetScreen = () => {
       let ratesData: any = null;
       // be tolerant to 0/1-based month on server
       const tryUrls = [
-        `${API_BASE}/api/adminRates/rate?month=${month}&year=${year}`,
-        `${API_BASE}/api/adminRates/rate?month=${String(month).padStart(
+        `${API_BASE_URL}/api/adminRates/rate?month=${month}&year=${year}`,
+        `${API_BASE_URL}/api/adminRates/rate?month=${String(month).padStart(
           2,
           "0"
         )}&year=${year}`,
-        `${API_BASE}/api/adminRates/rate?month=${month - 1}&year=${year}`,
+        `${API_BASE_URL}/api/adminRates/rate?month=${month - 1}&year=${year}`,
       ];
       for (const url of tryUrls) {
         try {
@@ -357,7 +358,7 @@ const TimesheetScreen = () => {
 
       // fetch admin UPI
       const upiRes = await axios.get(
-        `${API_BASE}/api/timesheetRoutes/admin-upi`
+        `${API_BASE_URL}/api/timesheetRoutes/admin-upi`
       );
       const { upiId, name } = upiRes.data || {};
       if (!upiId || !name) {
@@ -405,7 +406,7 @@ const TimesheetScreen = () => {
       }
 
       const res = await axios.post(
-        `${API_BASE}/api/timesheetRoutes/payments`,
+        `${API_BASE_URL}/api/timesheetRoutes/payments`,
         payload
       );
       if (res.data?.success) {

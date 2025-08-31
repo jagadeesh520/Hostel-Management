@@ -207,7 +207,7 @@ export default function StudentDashboard() {
         <View style={styles.profileSection}>
           {student?.faceImage && !imageError ? (
             <Image
-              source={{ uri: `https://api.sjtechsol.com${student.faceImage}` }}
+              source={{ uri: `${API_BASE_URL}${student.faceImage}` }}
               style={styles.avatar}
               onError={() => setImageError(true)}
             />

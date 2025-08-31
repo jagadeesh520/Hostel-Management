@@ -1,18 +1,19 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Image,
-    Modal,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  Modal,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
 type Ticket = {
@@ -27,7 +28,7 @@ type Ticket = {
   assignedWarden?: string | { _id: string; name?: string; block?: string };
 };
 
-const BASE = "https://api.sjtechsol.com";
+//const BASE = "https://api.sjtechsol.com";
 type FilterKey = "all" | "assigned" | "pending" | "wardenfixed" | "resolved";
 
 export default function WardenTickets() {
@@ -57,10 +58,10 @@ export default function WardenTickets() {
       // ALWAYS get ALL tickets (no server filtering)
       let list: Ticket[] = [];
       try {
-        const res = await axios.get<Ticket[]>(`${BASE}/api/issueTicket/tickets`, { headers });
+        const res = await axios.get<Ticket[]>(`${API_BASE_URL}/api/issueTicket/tickets`, { headers });
         list = Array.isArray(res.data) ? res.data : [];
       } catch {
-        const res2 = await axios.get<Ticket[]>(`${BASE}/api/tickets`, { headers });
+        const res2 = await axios.get<Ticket[]>(`${API_BASE_URL}/api/tickets`, { headers });
         list = Array.isArray(res2.data) ? res2.data : [];
       }
       setTickets(list);
@@ -146,7 +147,7 @@ export default function WardenTickets() {
       } as any);
 
       await axios.post(
-        `${BASE}/api/issueTicket/tickets/${selected._id}/warden-fix`,
+        `${API_BASE_URL}/api/issueTicket/tickets/${selected._id}/warden-fix`,
         form,
         { headers }
       );
@@ -254,7 +255,7 @@ export default function WardenTickets() {
               {/* Student image */}
               <TicketThumb
                 uri={
-                  item.imagePath ? `${BASE}/uploads/faces/${item.imagePath}` : undefined
+                  item.imagePath ? `${API_BASE_URL}/uploads/faces/${item.imagePath}` : undefined
                 }
               />
 
@@ -309,7 +310,7 @@ export default function WardenTickets() {
                 {/* Student’s original image */}
                 {selected.imagePath ? (
                   <Image
-                    source={{ uri: `${BASE}/uploads/faces/${selected.imagePath}` }}
+                    source={{ uri: `${API_BASE_URL}/uploads/faces/${selected.imagePath}` }}
                     style={{ width: "100%", height: 180, borderRadius: 8, marginTop: 8 }}
                     resizeMode="cover"
                   />
@@ -322,7 +323,7 @@ export default function WardenTickets() {
                       Proof attached
                     </Text>
                     <Image
-                      source={{ uri: `${BASE}/uploads/faces/${selected.resolutionImage}` }}
+                      source={{ uri: `${API_BASE_URL}/uploads/faces/${selected.resolutionImage}` }}
                       style={{ width: "100%", height: 180, borderRadius: 8, marginTop: 6 }}
                       resizeMode="cover"
                     />

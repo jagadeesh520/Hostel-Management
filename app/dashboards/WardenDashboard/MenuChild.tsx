@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
@@ -16,7 +17,7 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 type MenuItem = { name: string; category: string; imageUrl?: string | null };
 type MenuDoc = { date: string; items: MenuItem[] };
 
-const BASE_URL = "https://api.sjtechsol.com";
+//const BASE_URL = "https://api.sjtechsol.com";
 
 export default function MenuChild() {
   const [menu, setMenu] = useState<MenuDoc | null>(null);
@@ -47,7 +48,7 @@ export default function MenuChild() {
       const date = todayIST();
 
       // GET does NOT need token. We pass it only if present.
-      const res = await axios.get<MenuDoc>(`${BASE_URL}/api/menu`, {
+      const res = await axios.get<MenuDoc>(`${API_BASE_URL}/api/menu`, {
         params: { date },
         headers,
       });
@@ -94,13 +95,13 @@ export default function MenuChild() {
 
       // Try DELETE with query params; fallback to POST body
       try {
-        await axios.delete(`${BASE_URL}/api/menu/item`, {
+        await axios.delete(`${API_BASE_URL}/api/menu/item`, {
           headers,
           params: { date, category, name },
         });
       } catch {
         await axios.post(
-          `${BASE_URL}/api/menu/removeItem`,
+          `${API_BASE_URL}/api/menu/removeItem`,
           { date, category, name },
           { headers }
         );
@@ -141,7 +142,7 @@ export default function MenuChild() {
       hasImg && item.imageUrl?.startsWith("http")
         ? item.imageUrl!
         : hasImg
-        ? `${BASE_URL}${item.imageUrl}`
+        ? `${API_BASE_URL}${item.imageUrl}`
         : null;
 
     return (

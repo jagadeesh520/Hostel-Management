@@ -146,7 +146,7 @@ const StudentProfile = () => {
             <View style={styles.profileHeader}>
               {student.faceImage ? (
                 <Image
-                  source={{ uri: `https://api.sjtechsol.com${student.faceImage}` }}
+                  source={{ uri: `${API_BASE_URL}${student.faceImage}` }}
                   style={styles.faceImage}
                 />
               ) : (

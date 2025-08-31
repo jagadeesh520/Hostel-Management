@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
@@ -26,7 +27,7 @@ type LeaveItem = {
   student?: { _id: string; name?: string; email?: string; rollNo?: string };
 };
 
-const BASE_URL = "https://api.sjtechsol.com";
+//const BASE_URL = "https://api.sjtechsol.com";
 const PAGE_SIZE = 12;
 const TABS = ["all", "pending", "approved", "rejected"] as const;
 type Tab = typeof TABS[number];
@@ -77,7 +78,7 @@ export default function WardenLeaveDashboard() {
       // Visual debugging - show what params are being sent
       setDebugInfo(`Fetching: tab=${tab}, page=${_page}, status=${params.status || "all"}`);
 
-      const res = await axios.get(`${BASE_URL}/api/leave`, {
+      const res = await axios.get(`${API_BASE_URL}/api/leave`, {
         headers,
         params,
         validateStatus: () => true,
@@ -142,7 +143,7 @@ export default function WardenLeaveDashboard() {
       setDecidingId(id);
       const headers = await authHeader();
       const res = await axios.patch(
-        `${BASE_URL}/api/leave/${id}/decision`,
+        `${API_BASE_URL}/api/leave/${id}/decision`,
         { action },
         { headers, validateStatus: () => true }
       );

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -14,8 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const API_URL = "https://api.sjtechsol.com";
-const WARDEN_API = `${API_URL}/api/leave`; // adjust if mounted elsewhere
+//const API_URL = "https://api.sjtechsol.com";
+const WARDEN_API = `${API_BASE_URL}/api/leave`; // adjust if mounted elsewhere
 
 type Status = "pending" | "approved" | "rejected";
 type Tab = "all" | Status | "cancelled";

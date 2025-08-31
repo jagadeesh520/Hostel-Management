@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
@@ -32,7 +33,7 @@ type Ticket = {
 
 type Warden = { _id: string; name: string; block: string };
 
-const BASE = "https://api.sjtechsol.com";
+//const BASE = "https://api.sjtechsol.com";
 
 const AdminTicketScreen = () => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -73,7 +74,7 @@ const AdminTicketScreen = () => {
 
       // Wardens
       try {
-        const resW = await axios.get<Warden[]>(`${BASE}/api/wardens`, {
+        const resW = await axios.get<Warden[]>(`${API_BASE_URL}/api/wardens`, {
           headers,
         });
         setWardens(Array.isArray(resW.data) ? resW.data : []);
@@ -85,7 +86,7 @@ const AdminTicketScreen = () => {
       // Tickets (admin can see all)
       try {
         const resT = await axios.get<Ticket[]>(
-          `${BASE}/api/issueTicket/tickets`,
+          `${API_BASE_URL}/api/issueTicket/tickets`,
           { headers }
         );
         setTickets(Array.isArray(resT.data) ? resT.data : []);
@@ -154,7 +155,7 @@ const AdminTicketScreen = () => {
     try {
       const headers = await getAdminHeaders();
       const res = await axios.post(
-        `${BASE}/api/issueTicket/tickets/${selectedTicket._id}/assign`,
+        `${API_BASE_URL}/api/issueTicket/tickets/${selectedTicket._id}/assign`,
         { wardenId: assignWardenId },
         { headers }
       );
@@ -180,7 +181,7 @@ const AdminTicketScreen = () => {
       const headers = await getAdminHeaders();
       // Some backends return 200 with updated doc; some return 204.
       const res = await axios.put(
-        `${BASE}/api/issueTicket/tickets/${selectedTicket._id}/resolve`,
+        `${API_BASE_URL}/api/issueTicket/tickets/${selectedTicket._id}/resolve`,
         {},
         { headers }
       );
@@ -242,13 +243,13 @@ const AdminTicketScreen = () => {
           {item.imagePath ? (
             <TouchableOpacity
               onPress={() => {
-                setZoomImageUri(`${BASE}/uploads/faces/${item.imagePath}`);
+                setZoomImageUri(`${API_BASE_URL}/uploads/faces/${item.imagePath}`);
                 setZoomVisible(true);
               }}
             >
               <Image
                 source={{
-                  uri: `${BASE}/uploads/faces/${item.imagePath}`,
+                  uri: `${API_BASE_URL}/uploads/faces/${item.imagePath}`,
                 }}
                 style={{
                   width: 100,
@@ -265,14 +266,14 @@ const AdminTicketScreen = () => {
             <TouchableOpacity
               onPress={() => {
                 setZoomImageUri(
-                  `${BASE}/uploads/faces/${item.resolutionImage}`
+                  `${API_BASE_URL}/uploads/faces/${item.resolutionImage}`
                 );
                 setZoomVisible(true);
               }}
             >
               <Image
                 source={{
-                  uri: `${BASE}/uploads/faces/${item.resolutionImage}`,
+                  uri: `${API_BASE_URL}/uploads/faces/${item.resolutionImage}`,
                 }}
                 style={{ width: 100, height: 100, borderRadius: 8 }}
                 resizeMode="cover"

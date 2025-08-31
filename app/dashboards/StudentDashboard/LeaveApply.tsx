@@ -1,3 +1,4 @@
+import { API_BASE_URL } from '@/constants/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
@@ -16,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const API_URL = 'https://api.sjtechsol.com';
+//const API_URL = 'https://api.sjtechsol.com';
 const BUTTON_HEIGHT = 56;
 
 type LeaveItem = {
@@ -70,7 +71,7 @@ const StudentDashboard = () => {
       if (!rollNo) return;
 
       // our backend supports page & limit; fetch only the most recent one
-      const res = await fetch(`${API_URL}/api/leave/mine?page=1&limit=1`, {
+      const res = await fetch(`${API_BASE_URL}/api/leave/mine?page=1&limit=1`, {
         headers: {
           Authorization: `Bearer ${rollNo}`,
           'x-rollno': rollNo,
@@ -107,7 +108,7 @@ const StudentDashboard = () => {
         return Alert.alert('Not signed in', 'Missing roll number. Please login again.');
       }
 
-      const res = await fetch(`${API_URL}/api/leave/apply`, {
+      const res = await fetch(`${API_BASE_URL}/api/leave/apply`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +153,7 @@ const StudentDashboard = () => {
           try {
             const rollNo = await AsyncStorage.getItem('rollNo');
             if (!rollNo) return Alert.alert('Not signed in', 'Missing roll number.');
-            const res = await fetch(`${API_URL}/api/leave/${id}/cancel`, {
+            const res = await fetch(`${API_BASE_URL}/api/leave/${id}/cancel`, {
               method: 'PATCH',
               headers: {
                 Authorization: `Bearer ${rollNo}`,

@@ -1,4 +1,5 @@
 // WardenLogin.tsx
+import { API_BASE_URL } from "@/constants/config";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
@@ -18,7 +19,7 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 
-const BASE_URL = "https://api.sjtechsol.com";
+//const BASE_URL = "https://api.sjtechsol.com";
 
 export default function WardenLogin() {
   const [email, setEmail] = useState("");
@@ -53,7 +54,7 @@ export default function WardenLogin() {
       setLoading(true);
       Keyboard.dismiss();
 
-      const res = await fetch(`${BASE_URL}/api/auth/login`, {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

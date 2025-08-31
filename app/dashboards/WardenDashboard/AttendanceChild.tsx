@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
@@ -13,7 +14,7 @@ type AttendanceListItem = {
   blockName: string;
 };
 
-const BASE_URL = "https://api.sjtechsol.com";
+//const BASE_URL = "https://api.sjtechsol.com";
 
 export default function AttendanceChild() {
   const [total, setTotal] = useState(0);
@@ -45,7 +46,7 @@ export default function AttendanceChild() {
 
       // Use the list endpoint you implemented
       const { data } = await axios.get<AttendanceListItem[]>(
-        `${BASE_URL}/api/attendance/list?date=${date}`,
+        `${API_BASE_URL}/api/attendance/list?date=${date}`,
         { headers }
       );
 

@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import axios from "axios";
@@ -58,7 +59,7 @@ type LeaveItem = {
   };
 };
 
-const BASE_URL = "https://api.sjtechsol.com";
+//const BASE_URL = "https://api.sjtechsol.com";
 
 // ---------- helpers ----------
 const shortDate = (iso?: string) => (iso ? new Date(iso).toDateString() : "");
@@ -152,7 +153,7 @@ export default function WardenDashboard() {
 
       // Wardens (for names beside tickets)
       try {
-        const w = await axios.get(`${BASE_URL}/api/wardens`, { headers });
+        const w = await axios.get(`${API_BASE_URL}/api/wardens`, { headers });
         setWardens(Array.isArray(w.data) ? w.data : []);
       } catch {
         setWardens([]);
@@ -161,14 +162,14 @@ export default function WardenDashboard() {
       // Tickets: ALWAYS get ALL (no filtering)
       try {
         const res = await axios.get<IssueTicket[]>(
-          `${BASE_URL}/api/issueTicket/tickets`,
+          `${API_BASE_URL}/api/issueTicket/tickets`,
           { headers }
         );
         setTickets(Array.isArray(res.data) ? res.data : []);
       } catch {
         try {
           const res2 = await axios.get<IssueTicket[]>(
-            `${BASE_URL}/api/tickets`,
+            `${API_BASE_URL}/api/tickets`,
             {
               headers,
             }
@@ -185,7 +186,7 @@ export default function WardenDashboard() {
       // Menu (today)
       try {
         const date = todayIST();
-        const res = await axios.get(`${BASE_URL}/api/menu`, {
+        const res = await axios.get(`${API_BASE_URL}/api/menu`, {
           params: { date },
           headers,
         });
@@ -198,7 +199,7 @@ export default function WardenDashboard() {
       try {
         const date = todayIST();
         const aList = await axios.get<AttendanceListItem[]>(
-          `${BASE_URL}/api/attendance/list?date=${date}`,
+          `${API_BASE_URL}/api/attendance/list?date=${date}`,
           { headers }
         );
         const list = aList.data || [];
@@ -216,7 +217,7 @@ export default function WardenDashboard() {
 
       // Leaves (pending summary + latest pending preview)
       try {
-        const resLeaves = await axios.get(`${BASE_URL}/api/leave`, {
+        const resLeaves = await axios.get(`${API_BASE_URL}/api/leave`, {
           headers,
           params: { status: "pending", page: 1, limit: 5 },
           validateStatus: () => true,
@@ -274,7 +275,7 @@ export default function WardenDashboard() {
       if (!token) return Alert.alert("Error", "Warden not logged in.");
       const headers = { Authorization: `Bearer ${token}` };
       const res = await axios.patch(
-        `${BASE_URL}/api/leave/${id}/decision`,
+        `${API_BASE_URL}/api/leave/${id}/decision`,
         { action: "approve" },
         { headers, validateStatus: () => true }
       );
@@ -300,7 +301,7 @@ export default function WardenDashboard() {
             if (!token) return Alert.alert("Error", "Warden not logged in.");
             const headers = { Authorization: `Bearer ${token}` };
             const res = await axios.patch(
-              `${BASE_URL}/api/leave/${id}/decision`,
+              `${API_BASE_URL}/api/leave/${id}/decision`,
               { action: "reject", comment: "Rejected by warden" },
               { headers, validateStatus: () => true }
             );
