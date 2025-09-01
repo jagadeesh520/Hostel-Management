@@ -18,7 +18,7 @@ import {
 
 const TOAST_DURATION = 3500;
 const SUCCESS_COLOR = "#27AE60"; // green
-const ERROR_COLOR = "#E74C3C";   // red
+const ERROR_COLOR = "#E74C3C"; // red
 
 // ---- result types sent to the parent via onResult ----
 export type ResultType =
@@ -59,14 +59,18 @@ export const FaceModalScanner = ({
   // --- Toast state (in its own modal) ---
   const [toastText, setToastText] = useState<string>("");
   const [toastBg, setToastBg] = useState<string>(SUCCESS_COLOR);
-  const toastY = useRef(new Animated.Value(120)).current;     // slide up
-  const toastOpacity = useRef(new Animated.Value(0)).current;  // fade in
-  const toastScale = useRef(new Animated.Value(0.95)).current; // 🌟 POP scale
+  const toastY = useRef(new Animated.Value(120)).current;
+  const toastOpacity = useRef(new Animated.Value(0)).current;
+  const toastScale = useRef(new Animated.Value(0.95)).current;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
 
   // Queue parent result until after toast hides
   const pendingResultRef = useRef<ScannerResult | null>(null);
+
+  const safeDefer = (fn: () => void) => {
+    setTimeout(() => requestAnimationFrame(fn), 0);
+  };
 
   const showToast = useCallback(
     (text: string, bgColor: string, onHidden?: () => void) => {
@@ -76,14 +80,12 @@ export const FaceModalScanner = ({
       }
       setToastText(text);
       setToastBg(bgColor);
-      setToastVisible(true); // show toast modal
+      setToastVisible(true);
 
-      // Reset starting point for the animation
       toastY.setValue(120);
       toastOpacity.setValue(0);
       toastScale.setValue(0.95);
 
-      // Play: slide up + fade in + springy scale
       Animated.parallel([
         Animated.timing(toastY, {
           toValue: 0,
@@ -105,7 +107,6 @@ export const FaceModalScanner = ({
           useNativeDriver: true,
         }),
       ]).start(() => {
-        // Hide after duration with graceful ease + slight shrink
         toastTimerRef.current = setTimeout(() => {
           Animated.parallel([
             Animated.timing(toastY, {
@@ -127,16 +128,21 @@ export const FaceModalScanner = ({
               useNativeDriver: true,
             }),
           ]).start(() => {
-            setToastVisible(false); // hide toast modal
+            setToastVisible(false);
 
-            // Emit any queued parent result now
             if (pendingResultRef.current) {
               const queued = pendingResultRef.current;
               pendingResultRef.current = null;
-              try { onResult?.(queued); } catch {}
+              safeDefer(() => {
+                try {
+                  onResult?.(queued);
+                } catch {}
+              });
             }
 
-            onHidden?.();
+            if (onHidden) {
+              safeDefer(onHidden);
+            }
           });
         }, TOAST_DURATION);
       });
@@ -166,13 +172,21 @@ export const FaceModalScanner = ({
 
   const fadeOut = useCallback(() => {
     requestAnimationFrame(() => {
-      Animated.timing(opacityAnim, { toValue: 0.3, duration: 200, useNativeDriver: true }).start();
+      Animated.timing(opacityAnim, {
+        toValue: 0.3,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
     });
   }, [opacityAnim]);
 
   const fadeIn = useCallback(() => {
     requestAnimationFrame(() => {
-      Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }).start(() => {
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
         setProcessing(false);
       });
     });
@@ -182,7 +196,7 @@ export const FaceModalScanner = ({
     if (!visible) return;
 
     hideToastImmediately();
-    pendingResultRef.current = null; // clear any old queued result
+    pendingResultRef.current = null;
 
     setCountdown(50);
     setProcessing(true);
@@ -193,7 +207,7 @@ export const FaceModalScanner = ({
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(countdownTimer);
-          onClose();
+          safeDefer(onClose);
           return 0;
         }
         return prev - 1;
@@ -229,7 +243,8 @@ export const FaceModalScanner = ({
   };
 
   const processImage = async (uri: string) => {
-    const normalizedUri = Platform.OS === "ios" ? uri.replace("file://", "") : uri;
+    const normalizedUri =
+      Platform.OS === "ios" ? uri.replace("file://", "") : uri;
 
     const formData = new FormData();
     formData.append("faceImage", {
@@ -240,9 +255,13 @@ export const FaceModalScanner = ({
     formData.append("rollNo", student.rollNo);
 
     const sendRequest = async () => {
-      return axios.post(`${API_BASE_URL}api/attendance/recognize`, formData, {
+      const url = API_BASE_URL.endsWith("/")
+        ? `${API_BASE_URL}api/attendance/recognize`
+        : `${API_BASE_URL}/api/attendance/recognize`;
+
+      return axios.post(url, formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        timeout: 15000,
+        timeout: 60000,
       });
     };
 
@@ -252,6 +271,7 @@ export const FaceModalScanner = ({
         res = await sendRequest();
       } catch (error: any) {
         if (error.message === "Network Error") {
+          console.warn("⚠️ Network error, retrying once...");
           await new Promise((r) => setTimeout(r, 1000));
           res = await sendRequest(); // retry once
         } else {
@@ -259,55 +279,113 @@ export const FaceModalScanner = ({
         }
       }
 
-      // ✅ SUCCESS → green toast, queue parent banner, then close
-      if (res.status === 200 && res.data?.student) {
-        const title = "Attendance Marked";
-        const subtitle = `${student.studentName} is present.`;
+      console.log("📡 API response:", res.data);
 
-        // Queue for parent after toast hides
-        pendingResultRef.current = { type: "success", title, subtitle };
+      const { status, message, recognizedId } = res.data || {};
+
+      if (!status) {
+        showToast("Invalid server response", ERROR_COLOR);
+        return;
+      }
+
+      if (status === "matched") {
+        const subtitle = `${student.studentName} is present.`;
+        pendingResultRef.current = {
+          type: "success",
+          title: "Attendance Marked",
+          subtitle,
+        };
 
         showToast(subtitle, SUCCESS_COLOR, () => {
-          try { onMatchSuccess(); } catch {}
-          onClose();
+          safeDefer(() => {
+            try {
+              onMatchSuccess();
+            } catch {}
+            onClose();
+          });
         });
         return;
       }
 
-      // Not recognized → red toast, keep modal open, then emit to parent
-      pendingResultRef.current = {
-        type: "notfound",
-        title: "Not Recognized",
-        subtitle: "Face did not match any record.",
-      };
-      showToast("Face not recognized.", ERROR_COLOR);
-
-    } catch (error: any) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      if (status === 404) {
-        const msg = data?.message || "Face did not match any student record.";
-        pendingResultRef.current = { type: "notfound", title: "Not Recognized", subtitle: msg };
-        showToast(msg, ERROR_COLOR);
+      if (status === "already") {
+        pendingResultRef.current = {
+          type: "already",
+          title: "Already Marked",
+          subtitle: `${student.studentName} is already present.`,
+        };
+        showToast(
+          `${student.studentName} is already marked present.`,
+          SUCCESS_COLOR
+        );
         return;
       }
 
-      if (status === 403 && data?.message?.includes("Face mismatch")) {
-        const scanned = data.message?.match(/scanned\s(.+),/)?.[1] || "Unknown";
-        const subtitle = `Logged in as ${student.rollNo}, scanned face: ${scanned}.`;
-        pendingResultRef.current = { type: "mismatch", title: "Face Mismatch", subtitle };
+      if (status === "mismatch") {
+        const subtitle = `Logged in as ${student.rollNo}, scanned face: ${recognizedId}.`;
+        pendingResultRef.current = {
+          type: "mismatch",
+          title: "Face Mismatch",
+          subtitle,
+        };
         showToast("Face mismatch.", ERROR_COLOR);
         return;
       }
 
-      if (error.message === "Network Error") {
-        // Network issues use Alert (no toast), emit immediately
-        try { onResult?.({ type: "network", title: "Network Issue", subtitle: "Check your connection and try again." }); } catch {}
-        Alert.alert("Network Issue", "Unable to reach recognition service. Please check your connection and try again.");
+      if (status === "unmatched") {
+        pendingResultRef.current = {
+          type: "notfound",
+          title: "Not Recognized",
+          subtitle: "Face did not match any student record.",
+        };
+        showToast("Face not recognized.", ERROR_COLOR);
+        return;
+      }
+
+      if (status === "error") {
+        pendingResultRef.current = {
+          type: "error",
+          title: "Error",
+          subtitle: message || "Recognition error",
+        };
+        showToast(message || "Recognition error", ERROR_COLOR);
+        return;
+      }
+
+      showToast("Unexpected response", ERROR_COLOR);
+    } catch (error: any) {
+      console.error("❌ Axios error:", error.message);
+
+      if (
+        error.message?.includes("Network Error") ||
+        error.code === "ECONNABORTED"
+      ) {
+        safeDefer(() => {
+          try {
+            onResult?.({
+              type: "network",
+              title: "Network Issue",
+              subtitle: "Check your connection and try again.",
+            });
+          } catch {}
+        });
+        Alert.alert(
+          "Network Issue",
+          "Unable to reach recognition service. Please check your connection and try again."
+        );
       } else {
-        try { onResult?.({ type: "error", title: "Service Unavailable", subtitle: "Please try again." }); } catch {}
-        Alert.alert("Error", "Recognition service unavailable. Please try again.");
+        safeDefer(() => {
+          try {
+            onResult?.({
+              type: "error",
+              title: "Service Unavailable",
+              subtitle: "Please try again.",
+            });
+          } catch {}
+        });
+        Alert.alert(
+          "Error",
+          "Recognition service unavailable. Please try again."
+        );
       }
     }
   };
@@ -317,7 +395,9 @@ export const FaceModalScanner = ({
   if (!permission.granted) {
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>We need camera permission to scan your face</Text>
+        <Text style={styles.permissionText}>
+          We need camera permission to scan your face
+        </Text>
         <TouchableOpacity onPress={requestPermission} style={styles.button}>
           <Text style={styles.buttonText}>Allow Camera Access</Text>
         </TouchableOpacity>
@@ -328,8 +408,15 @@ export const FaceModalScanner = ({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={styles.container}>
-        <Animated.View style={[styles.cameraContainer, { opacity: opacityAnim }]}>
-          <CameraView style={styles.camera} facing={facing} ref={cameraRef} enableTorch={false} />
+        <Animated.View
+          style={[styles.cameraContainer, { opacity: opacityAnim }]}
+        >
+          <CameraView
+            style={styles.camera}
+            facing={facing}
+            ref={cameraRef}
+            enableTorch={false}
+          />
         </Animated.View>
 
         <View style={styles.overlay}>
@@ -342,11 +429,18 @@ export const FaceModalScanner = ({
             )}
           </View>
 
-          <Text style={styles.instruction}>Position {student.studentName}'s face inside the frame</Text>
+          <Text style={styles.instruction}>
+            Position {student.studentName}'s face inside the frame
+          </Text>
           <Text style={styles.countdownText}>{countdown}s</Text>
 
           <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBarFill, { width: `${(countdown / 50) * 100}%` }]} />
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${(countdown / 50) * 100}%` },
+              ]}
+            />
           </View>
 
           <TouchableOpacity
@@ -354,7 +448,10 @@ export const FaceModalScanner = ({
             disabled={processing}
             style={[
               styles.actionButton,
-              { backgroundColor: processing ? "#888" : "#00FF00", marginTop: 20 },
+              {
+                backgroundColor: processing ? "#888" : "#00FF00",
+                marginTop: 20,
+              },
             ]}
           >
             <Text style={styles.buttonText}>Analyse</Text>
@@ -372,7 +469,7 @@ export const FaceModalScanner = ({
           <TouchableOpacity
             onPress={() => {
               hideToastImmediately();
-              onClose();
+              safeDefer(onClose);
             }}
             style={[styles.actionButton, styles.cancelButton]}
           >
@@ -380,7 +477,7 @@ export const FaceModalScanner = ({
           </TouchableOpacity>
         </View>
 
-        {/* 🔔 Scanner Toast Modal (always above parent UI) */}
+        {/* 🔔 Scanner Toast Modal */}
         <Modal
           visible={toastVisible}
           transparent
@@ -402,10 +499,20 @@ export const FaceModalScanner = ({
             >
               <View style={styles.toastContent}>
                 {toastBg === SUCCESS_COLOR && (
-                  <Ionicons name="checkmark-circle" size={28} color="white" style={{ marginRight: 10 }} />
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={28}
+                    color="white"
+                    style={{ marginRight: 10 }}
+                  />
                 )}
                 {toastBg === ERROR_COLOR && (
-                  <Ionicons name="close-circle" size={28} color="white" style={{ marginRight: 10 }} />
+                  <Ionicons
+                    name="close-circle"
+                    size={28}
+                    color="white"
+                    style={{ marginRight: 10 }}
+                  />
                 )}
                 <Text style={styles.toastText}>{toastText}</Text>
               </View>
@@ -422,39 +529,96 @@ const styles = StyleSheet.create({
   cameraContainer: { flex: 1 },
   camera: { flex: 1 },
   permissionContainer: {
-    flex: 1, justifyContent: "center", alignItems: "center", padding: 20, backgroundColor: "#f5f5f5",
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#f5f5f5",
   },
-  permissionText: { fontSize: 16, marginBottom: 20, textAlign: "center", color: "#333" },
+  permissionText: {
+    fontSize: 16,
+    marginBottom: 20,
+    textAlign: "center",
+    color: "#333",
+  },
   countdownText: { color: "white", fontSize: 18, marginTop: 10 },
-  progressBarContainer: { height: 6, width: "80%", backgroundColor: "#444", borderRadius: 3, marginTop: 10 },
-  progressBarFill: { height: "100%", backgroundColor: "#00FF00", borderRadius: 3 },
-  footer: { position: "absolute", bottom: 30, left: 0, right: 0, flexDirection: "row", justifyContent: "space-around" },
-  actionButton: { backgroundColor: "rgba(0,0,0,0.7)", padding: 15, borderRadius: 10, minWidth: 120, alignItems: "center" },
+  progressBarContainer: {
+    height: 6,
+    width: "80%",
+    backgroundColor: "#444",
+    borderRadius: 3,
+    marginTop: 10,
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#00FF00",
+    borderRadius: 3,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-around",
+  },
+  actionButton: {
+    backgroundColor: "rgba(0,0,0,0.7)",
+    padding: 15,
+    borderRadius: 10,
+    minWidth: 120,
+    alignItems: "center",
+  },
   cancelButton: { backgroundColor: "rgba(255,50,50,0.8)" },
-  button: { padding: 16, borderRadius: 8, backgroundColor: "#2c3e50", marginBottom: 16, alignItems: "center" },
+  button: {
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#2c3e50",
+    marginBottom: 16,
+    alignItems: "center",
+  },
   buttonText: { color: "white", fontSize: 16, fontWeight: "500" },
   scanningText: { color: "white", fontSize: 14, marginTop: 8 },
-  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center", backgroundColor: "transparent" },
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   scanFrame: {
-    width: 250, height: 300, borderWidth: 2, borderColor: "rgba(0, 255, 0, 0.7)",
-    borderRadius: 10, backgroundColor: "rgba(0,0,0,0.2)", justifyContent: "center", alignItems: "center",
+    width: 250,
+    height: 300,
+    borderWidth: 2,
+    borderColor: "rgba(0, 255, 0, 0.7)",
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  scanningIndicator: { alignItems: "center", padding: 20, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 8 },
+  scanningIndicator: {
+    alignItems: "center",
+    padding: 20,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 8,
+  },
   instruction: {
-    color: "white", fontSize: 16, marginTop: 20, textAlign: "center",
-    backgroundColor: "rgba(0,0,0,0.5)", padding: 10, borderRadius: 5,
+    color: "white",
+    fontSize: 16,
+    marginTop: 20,
+    textAlign: "center",
+    backgroundColor: "rgba(0,0,0,0.5)",
+    padding: 10,
+    borderRadius: 5,
   },
-
-  // 🔔 Toast Modal layer
   toastModalLayer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "flex-end",
-    paddingBottom: 110, // sits above footer buttons
+    paddingBottom: 110,
     zIndex: 9999,
     elevation: 9999,
   },
-
-  // 🔔 Toast styles (color set dynamically)
   toast: {
     marginHorizontal: 20,
     paddingVertical: 20,

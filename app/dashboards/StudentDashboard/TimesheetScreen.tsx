@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -158,6 +159,9 @@ const TimesheetScreen = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [messOverdue, setMessOverdue] = useState(0);
   const [estOverdue, setEstOverdue] = useState(0);
+  const [payAmount, setPayAmount] = useState("");
+
+  console.log("messOverdue", messOverdue, estOverdue);
 
   useEffect(() => {
     if (!rollNo) return;
@@ -166,12 +170,23 @@ const TimesheetScreen = () => {
         const messRes = await axios.get(
           `${API_BASE_URL}/api/mess/dues/${rollNo}`
         );
-        setMessOverdue(messRes.data?.due || 0);
+        console.log("messRes.data", messRes.data);
+        setMessOverdue(messRes.data?.overdue || 0); // FIXED
+        // keep for UI
+        setDebugInfo((prev: any) => ({
+          ...prev,
+          messPaid: messRes.data?.paid || 0,
+        }));
 
         const estRes = await axios.get(
           `${API_BASE_URL}/api/establishment/dues/${rollNo}`
         );
-        setEstOverdue(estRes.data?.due || 0);
+        console.log("estRes", estRes.data);
+        setEstOverdue(estRes.data?.overdue || 0); // FIXED
+        setDebugInfo((prev: any) => ({
+          ...prev,
+          estPaid: estRes.data?.paid || 0,
+        }));
       } catch (err) {
         console.error("Overdue fetch failed", err);
       }
@@ -237,18 +252,21 @@ const TimesheetScreen = () => {
     yearTextArg: string | null
   ) => {
     try {
+      // Reset states
       setMessRatePerDay(0);
       setMessAmount(0);
       setPresentDays(0);
       setMarkedDates({});
       setEstablishmentAmount(0);
+      setMessOverdue(0);
+      setEstOverdue(0);
 
       if (!rollNo) return;
 
       const daysInMonth = new Date(year, month, 0).getDate();
       const monthPrefix = `${year}-${pad2(month)}`;
 
-      // ---- attendance
+      // ---- attendance ----
       const timesheetRes = await axios.get(
         `${API_BASE_URL}/api/timesheetRoutes/${rollNo}`
       );
@@ -298,7 +316,7 @@ const TimesheetScreen = () => {
       }
       setMarkedDates(marked);
 
-      // ---- rates (extended)
+      // ---- rates ----
       let ratesData: any = null;
       const tryUrls = [
         `${API_BASE_URL}/api/adminRates/rate?month=${month}&year=${year}`,
@@ -306,7 +324,6 @@ const TimesheetScreen = () => {
           2,
           "0"
         )}&year=${year}`,
-        `${API_BASE_URL}/api/adminRates/rate?month=${month - 1}&year=${year}`,
       ];
       for (const url of tryUrls) {
         try {
@@ -314,8 +331,9 @@ const TimesheetScreen = () => {
           ratesData = resp.data;
           break;
         } catch (e: any) {
-          if (e?.response?.status !== 404)
+          if (e?.response?.status !== 404) {
             console.error("Rate fetch error", url, e?.message);
+          }
         }
       }
 
@@ -324,7 +342,6 @@ const TimesheetScreen = () => {
       const diet = normDiet(dietArg);
       const isMale = isMaleGender(gender);
 
-      // choose rate by gender & diet
       let perDay = 0;
       if (isMale) {
         perDay = diet === "non-veg" ? rates.boysNonVegRate : rates.boysVegRate;
@@ -336,33 +353,41 @@ const TimesheetScreen = () => {
       const presentDaysCount = fPresent.length;
       const mess = presentDaysCount * (perDay || 0);
 
-      // establishment amount by year (monthly)
       const yrKey = pickYearKey(yearTextArg);
       const estAmount = Number(rates.estCharges?.[yrKey] ?? 0);
 
+      // Save current month info (just display)
       setPresentDays(presentDaysCount);
       setMessRatePerDay(perDay || 0);
       setMessAmount(mess);
       setEstablishmentAmount(estAmount);
 
-      // today's date
+      // ---- fetch dues from backend (truth source) ----
+      const [messRes, estRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/mess/dues/${rollNo}`),
+        axios.get(`${API_BASE_URL}/api/establishment/dues/${rollNo}`),
+      ]);
+
+      const backendMessOverdue = messRes.data?.overdue || 0;
+      const backendMessPaid = messRes.data?.paid || 0;
+      const backendEstOverdue = estRes.data?.overdue || 0;
+      const backendEstPaid = estRes.data?.paid || 0;
+
+      // ✅ Use backend directly, don’t add bills again
+      setMessOverdue(backendMessOverdue);
+      setEstOverdue(backendEstOverdue);
+
+      // Enable pay buttons only for current month
       const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
 
-      // check if selected month is before current month
-      const isPastMonth =
-        year < now.getFullYear() ||
-        (year === now.getFullYear() && month < now.getMonth() + 1);
-
-      if (isPastMonth) {
-        // Add this month's calculated bill to overdue
-        setMessOverdue((prev) => prev + mess);
-        setEstOverdue((prev) => prev + estAmount);
-      }
-
-      // pay availability: only allow starting from the next month
-      const nextMonthStart = new Date(year, month, 1);
-      setCanPayMess(now >= nextMonthStart);
-      setCanPayEst(now >= nextMonthStart);
+      setCanPayMess(
+        year === currentYear && month === currentMonth && backendMessOverdue > 0
+      );
+      setCanPayEst(
+        year === currentYear && month === currentMonth && backendEstOverdue > 0
+      );
 
       setDebugInfo({
         month,
@@ -374,6 +399,10 @@ const TimesheetScreen = () => {
         presentDaysCount,
         estCharges: rates.estCharges,
         usedYearKey: yrKey,
+        messOverdue: backendMessOverdue,
+        messPaid: backendMessPaid,
+        estOverdue: backendEstOverdue,
+        estPaid: backendEstPaid,
       });
     } catch (err) {
       console.error("Failed to fetch timesheet/rates:", err);
@@ -381,6 +410,8 @@ const TimesheetScreen = () => {
       setMessAmount(0);
       setPresentDays(0);
       setEstablishmentAmount(0);
+      setMessOverdue(0);
+      setEstOverdue(0);
     }
   };
 
@@ -440,7 +471,7 @@ const TimesheetScreen = () => {
       }
 
       const res = await axios.post(
-        `${API_BASE_URL}/api/timesheetRoutes/payments`,
+        `${API_BASE_URL}/api/timesheetRoutes/payment`,
         payload
       );
       if (res.data?.success) {
@@ -555,12 +586,21 @@ const TimesheetScreen = () => {
           {/* Mess Overdue Box */}
           <View style={[styles.card, { borderColor: "#00C853" }]}>
             <Text style={styles.cardTitle}>Mess Overdue</Text>
+
             <View style={styles.summaryRow}>
-              <Text>Amount</Text>
+              <Text>Overdue Amount</Text>
               <Text style={{ color: messOverdue > 0 ? "red" : "green" }}>
                 ₹{messOverdue}
               </Text>
             </View>
+
+            <View style={styles.summaryRow}>
+              <Text>Already Paid</Text>
+              <Text style={{ color: "green" }}>
+                ₹{debugInfo?.messPaid || 0}
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={[
                 styles.payButton,
@@ -578,12 +618,19 @@ const TimesheetScreen = () => {
           {/* Establishment Overdue Box */}
           <View style={[styles.card, { borderColor: "#2196f3" }]}>
             <Text style={styles.cardTitle}>Establishment Overdue</Text>
+
             <View style={styles.summaryRow}>
-              <Text>Amount</Text>
+              <Text>Overdue Amount</Text>
               <Text style={{ color: estOverdue > 0 ? "red" : "green" }}>
                 ₹{estOverdue}
               </Text>
             </View>
+
+            <View style={styles.summaryRow}>
+              <Text>Already Paid</Text>
+              <Text style={{ color: "green" }}>₹{debugInfo?.estPaid || 0}</Text>
+            </View>
+
             <TouchableOpacity
               style={[
                 styles.payButton,
@@ -610,17 +657,97 @@ const TimesheetScreen = () => {
             <Text style={styles.modalTitle}>
               {payKind === "mess" ? "Mess Bill" : "Establishment"} Payment
             </Text>
-            <Text>
-              Amount: ₹{payKind === "mess" ? messOverdue : estOverdue}
+
+            {/* Show overdue */}
+            <Text style={{ marginBottom: 6 }}>
+              Total Overdue: ₹{payKind === "mess" ? messOverdue : estOverdue}
             </Text>
-            <Text>Proceed to UPI?</Text>
+
+            {/* Input for partial amount */}
+            <TextInput
+              style={styles.input}
+              placeholder="Enter amount to pay"
+              keyboardType="numeric"
+              value={payAmount}
+              onChangeText={setPayAmount}
+            />
 
             <View style={styles.modalButtons}>
-              <Pressable
-                onPress={() => pay(payKind)}
+              {/* <Pressable
+                onPress={async () => {
+                  try {
+                    if (!payAmount || Number(payAmount) <= 0) {
+                      alert("Enter valid amount");
+                      return;
+                    }
+
+                    const res = await axios.post(
+                      `${API_BASE_URL}/api/payment/initiate`,
+                      {
+                        rollNo,
+                        feeType: payKind,
+                        amount: Number(payAmount),
+                      }
+                    );
+
+                    if (res.data?.redirectUrl) {
+                      Linking.openURL(res.data.redirectUrl); // redirect to BillDesk
+                    } else {
+                      alert("Payment initiation failed.");
+                    }
+                    setModalVisible(false);
+                  } catch (err) {
+                    console.error("Payment error:", err);
+                    alert("Payment failed. Try again.");
+                  }
+                }}
                 style={styles.modalPayButton}
               >
-                <Text style={{ color: "#fff" }}>Pay via UPI</Text>
+                <Text style={{ color: "#fff" }}>Pay via BillDesk</Text>
+              </Pressable> */}
+              <Pressable
+                onPress={async () => {
+                  try {
+                    if (!payAmount || Number(payAmount) <= 0) {
+                      alert("Enter valid amount");
+                      return;
+                    }
+
+                    const res = await axios.post(
+                      `${API_BASE_URL}/api/payment/initiate`, // ✅ make sure this matches backend
+                      {
+                        rollNo,
+                        feeType: payKind,
+                        amount: Number(payAmount),
+                      }
+                    );
+
+                    if (res.data?.success) {
+                      alert("Payment successful!");
+
+                      // 🔄 Refresh dues immediately
+                      const messRes = await axios.get(
+                        `${API_BASE_URL}/api/mess/dues/${rollNo}`
+                      );
+                      setMessOverdue(messRes.data?.overdue || 0);
+
+                      const estRes = await axios.get(
+                        `${API_BASE_URL}/api/establishment/dues/${rollNo}`
+                      );
+                      setEstOverdue(estRes.data?.overdue || 0);
+                    } else {
+                      alert("Payment initiation failed.");
+                    }
+
+                    setModalVisible(false);
+                  } catch (err) {
+                    console.error("Payment error:", err);
+                    alert("Payment failed. Try again.");
+                  }
+                }}
+                style={styles.modalPayButton}
+              >
+                <Text style={{ color: "#fff" }}>Pay (Dummy)</Text>
               </Pressable>
 
               <Pressable
@@ -732,6 +859,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#333",
     marginBottom: 4,
+  },
+  input: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 10,
+    marginVertical: 8,
   },
 });
 
