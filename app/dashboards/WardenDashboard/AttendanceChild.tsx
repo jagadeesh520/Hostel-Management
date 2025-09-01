@@ -14,7 +14,9 @@ type AttendanceListItem = {
   blockName: string;
 };
 
-//const BASE_URL = "https://api.sjtechsol.com";
+// Safe percentage formatter
+const safePct = (n: number) =>
+  isFinite(n) && !isNaN(n) ? Math.round(n) : 0;
 
 export default function AttendanceChild() {
   const [total, setTotal] = useState(0);
@@ -44,7 +46,6 @@ export default function AttendanceChild() {
       const headers = { Authorization: `Bearer ${token}` };
       const date = todayIST();
 
-      // Use the list endpoint you implemented
       const { data } = await axios.get<AttendanceListItem[]>(
         `${API_BASE_URL}/api/attendance/list?date=${date}`,
         { headers }
@@ -54,11 +55,10 @@ export default function AttendanceChild() {
       const totalStudents = list.length;
       const presentStudents = list.filter((x) => x.status === "Present").length;
 
-      // NOTE: This treats NotMarked as Absent (so Present% + Absent% = 100)
       setTotal(totalStudents);
       setPresent(presentStudents);
     } catch (e) {
-      console.error(e);
+      console.error("Attendance load error:", e);
       Alert.alert("Error", "Unable to load attendance.");
       setTotal(0);
       setPresent(0);
@@ -78,7 +78,7 @@ export default function AttendanceChild() {
         <AnimatedCircularProgress
           size={220}
           width={18}
-          fill={presentPct}
+          fill={safePct(presentPct)}
           tintColor="#27AE60"
           backgroundColor="#EB5757"
           rotation={0}
@@ -86,7 +86,7 @@ export default function AttendanceChild() {
         >
           {() => (
             <View style={{ alignItems: "center" }}>
-              <Text style={styles.bigPct}>{presentPct.toFixed(0)}%</Text>
+              <Text style={styles.bigPct}>{safePct(presentPct)}%</Text>
               <Text style={styles.midText}>Present</Text>
               <Text style={styles.smallText}>
                 {present} / {total}
@@ -99,13 +99,13 @@ export default function AttendanceChild() {
           <View style={styles.legendItem}>
             <View style={[styles.dot, { backgroundColor: "#27AE60" }]} />
             <Text style={styles.legendText}>
-              Present {presentPct.toFixed(0)}%
+              Present {safePct(presentPct)}%
             </Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.dot, { backgroundColor: "#EB5757" }]} />
             <Text style={styles.legendText}>
-              Absent {absentPct.toFixed(0)}%
+              Absent {safePct(absentPct)}%
             </Text>
           </View>
         </View>
