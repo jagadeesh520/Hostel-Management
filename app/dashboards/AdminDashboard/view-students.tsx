@@ -264,7 +264,7 @@ export default function ViewStudents() {
         </View>
       </View>
 
-      <View style={styles.filterRow}>
+      {/* <View style={styles.filterRow}>
         <View style={styles.pickerWrap}>
           <Picker selectedValue={yearFilter} onValueChange={setYearFilter} style={styles.picker}>
             <Picker.Item label="Year (All)" value="" />
@@ -283,7 +283,7 @@ export default function ViewStudents() {
             ))}
           </Picker>
         </View>
-      </View>
+      </View> */}
     </View>
   );
 

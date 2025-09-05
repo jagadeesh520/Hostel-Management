@@ -111,6 +111,9 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            debuggable true
+            minifyEnabled false
+            shrinkResources false
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -120,9 +123,17 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
+            debuggable false  // Set to true temporarily for debugging
+            crunchPngs true
         }
     }
     packagingOptions {
+        pickFirst '**/libc++_shared.so'
+        pickFirst '**/libfbjni.so'
+        pickFirst '**/libjsc.so'
+        pickFirst '**/libreactnativejni.so'
+        exclude 'META-INF/proguard/androidx-annotations.pro'
+        exclude 'META-INF/*.kotlin_module'
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }

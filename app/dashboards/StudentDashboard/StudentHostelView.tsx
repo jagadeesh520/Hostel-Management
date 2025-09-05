@@ -1,84 +1,114 @@
 import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Dimensions,
   FlatList,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
 
-//const API_BASE = `${API_BASE_URL}/api/hostels";
+// --- Grid constants (uniform squares) ---
+const NUM_COLS = 4;
+const GAP = 12; // spacing between tiles
+const SCREEN_W = Dimensions.get("window").width;
+// parent container has padding: 12 left + 12 right (see styles.container)
+const PARENT_PAD = 24;
+const TOTAL_GAPS = GAP * (NUM_COLS - 1);
+const ITEM = Math.floor((SCREEN_W - PARENT_PAD - TOTAL_GAPS) / NUM_COLS);
+
+const ordinal = (n: number | string) => {
+  const num = Number(n);
+  if (!num) return `${n}`;
+  const s = ["th", "st", "nd", "rd"];
+  const v = num % 100;
+  return num + (s[(v - 20) % 10] || s[v] || s[0]);
+};
 
 export default function StudentHostelView() {
-  const [assignedBlock, setAssignedBlock] = useState<any | null>(null);
+  const [student, setStudent] = useState<any | null>(null);
+  const [assignedBlocks, setAssignedBlocks] = useState<any[]>([]);
+  const [activeBlockIdx, setActiveBlockIdx] = useState(0);
+
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [myBooking, setMyBooking] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchAssignedBlock();
-    fetchMyBooking();
+    fetchAssignedBlocksAndBooking();
   }, []);
 
-  // 🔹 Fetch assigned block (gender + year rule)
-  const fetchAssignedBlock = async () => {
+  const fetchAssignedBlocksAndBooking = async () => {
     try {
+      setLoading(true);
       const rollNo = await AsyncStorage.getItem("rollNo");
       const token = await AsyncStorage.getItem("studentToken");
       if (!rollNo || !token) return;
 
-      const res = await axios.get(`${API_BASE_URL}/api/hostels/student/assigned-block/${rollNo}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      // Assigned blocks (array)
+      const res = await axios.get(
+        `${API_BASE_URL}/api/hostels/student/assigned-block/${rollNo}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setStudent(res.data.student);
+      setAssignedBlocks(res.data.assignments || []);
 
-      // { type, blockName, floors, student }
-      setAssignedBlock(res.data);
+      // Existing booking (if any)
+      const booking = await axios.get(
+        `${API_BASE_URL}/api/hostels/student/my-booking/${rollNo}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (booking.data) setMyBooking(booking.data);
     } catch (err: any) {
-      Alert.alert("Error", err?.response?.data?.error || "No block assigned");
+      const msg = err?.response?.data?.error || "No block assigned";
+      Alert.alert("Info", msg);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 🔹 Fetch student's booking
-  const fetchMyBooking = async () => {
-    try {
-      const rollNo = await AsyncStorage.getItem("rollNo");
-      const token = await AsyncStorage.getItem("studentToken");
-      if (!rollNo || !token) return;
-
-      const res = await axios.get(`${API_BASE_URL}/api/hostels/student/my-booking/${rollNo}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.data) setMyBooking(res.data);
-    } catch (err: any) {
-      console.log("No booking yet", err?.response?.data || err);
-    }
-  };
+  const activeBlock = useMemo(
+    () => assignedBlocks[activeBlockIdx] || null,
+    [assignedBlocks, activeBlockIdx]
+  );
 
   // 🔹 Book bed
   const bookBed = async (roomNumber: string, bedNumber: number) => {
     try {
       const token = await AsyncStorage.getItem("studentToken");
       const rollNo = await AsyncStorage.getItem("rollNo");
+      if (!activeBlock) return;
 
       await axios.post(
         `${API_BASE_URL}/api/hostels/student/book-bed`,
-        { blockName: assignedBlock.blockName, roomNumber, bedNumber, rollNo },
+        { blockName: activeBlock.blockName, roomNumber, bedNumber, rollNo },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setMyBooking({ blockName: assignedBlock.blockName, roomNumber, bedNumber });
-      Alert.alert("Success", `You booked Bed ${bedNumber} in Room ${roomNumber}`);
+      setMyBooking({
+        blockName: activeBlock.blockName,
+        roomNumber,
+        bedNumber,
+      });
+      Alert.alert(
+        "Success",
+        `You booked Bed ${bedNumber} in Room ${roomNumber}`
+      );
     } catch (err: any) {
       Alert.alert("Error", err?.response?.data?.error || "Booking failed");
     }
   };
 
-  // ✅ Already booked → only show allocation
+  // ✅ Already booked → show allocation
   if (myBooking) {
+    const bookedBlock =
+      assignedBlocks.find((b) => b.blockName === myBooking.blockName) || null;
+
     return (
       <View style={styles.container}>
         <Text style={styles.sectionTitle}>My Hostel Allocation</Text>
@@ -87,9 +117,17 @@ export default function StudentHostelView() {
           <Text style={styles.allocationTitle}>Booking Confirmed</Text>
 
           <View style={styles.allocationRow}>
+            <Text style={styles.allocationIcon}>👤</Text>
+            <Text style={styles.allocationText}>
+              {student?.name} ({student?.rollNo})
+            </Text>
+          </View>
+
+          <View style={styles.allocationRow}>
             <Text style={styles.allocationIcon}>🏢</Text>
             <Text style={styles.allocationText}>
-              {assignedBlock?.blockName} ({assignedBlock?.type})
+              {myBooking.blockName}
+              {bookedBlock?.type ? ` (${bookedBlock.type})` : ""}
             </Text>
           </View>
 
@@ -109,55 +147,76 @@ export default function StudentHostelView() {
     );
   }
 
-  // 🔹 Show rooms
-  const renderRooms = (floors: any[]) => {
-    const allRooms: any[] = [];
-    floors.forEach((floor: any) => allRooms.push(...floor.rooms));
+  // 🔹 Room grid grouped by floor (outer scroll handles all floors)
+  const RoomGrid = ({ block }: { block: any }) => {
+    const floors = block?.floors || [];
 
     return (
       <View style={styles.roomsContainer}>
         <Text style={styles.sectionTitle}>
-          Rooms in {assignedBlock.blockName} ({assignedBlock.type})
+          Rooms in {block?.blockName} {block?.type ? `(${block.type})` : ""}
         </Text>
-        <FlatList
-          data={allRooms}
-          numColumns={4}
-          keyExtractor={(item) => item.roomNumber}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.roomBox,
-                item.isBlocked && styles.roomBlocked,
-                selectedRoom?.roomNumber === item.roomNumber && styles.roomSelected,
-              ]}
-              onPress={() => {
-                if (item.isBlocked) {
-                  Alert.alert("Blocked", "This room is blocked by Admin");
-                } else {
-                  setSelectedRoom(item);
-                }
-              }}
-            >
-              <Text style={styles.roomText}>{item.roomNumber}</Text>
-              <Text style={styles.bedsCount}>
-                {item.beds?.length || 0} beds
-              </Text>
-              {item.isBlocked && <Text style={styles.blockedLabel}>🚫</Text>}
-            </TouchableOpacity>
-          )}
-        />
+
+        {floors.map((floor: any, idx: number) => (
+          <View key={idx} style={{ marginBottom: 20 }}>
+            <Text style={styles.floorTitle}>
+              {ordinal(floor.floorNumber)} Floor
+            </Text>
+
+            <FlatList
+              data={floor.rooms}
+              numColumns={NUM_COLS}
+              keyExtractor={(item) => item.roomNumber}
+              scrollEnabled={false}            // ⬅️ let the outer ScrollView scroll
+              renderItem={({ item, index }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.roomBox,
+                    item.isBlocked && styles.roomBlocked,
+                    selectedRoom?.roomNumber === item.roomNumber &&
+                      styles.roomSelected,
+                    {
+                      width: ITEM,
+                      height: ITEM,
+                      marginRight: index % NUM_COLS !== NUM_COLS - 1 ? GAP : 0,
+                      marginBottom: GAP,
+                    },
+                  ]}
+                  onPress={() => {
+                    if (item.isBlocked) {
+                      Alert.alert("Blocked", "This room is blocked by Admin");
+                    } else {
+                      setSelectedRoom(item);
+                    }
+                  }}
+                >
+                  <Text style={styles.roomText}>{item.roomNumber}</Text>
+                  <Text style={styles.bedsCount}>
+                    {item.beds?.length || 0} beds
+                  </Text>
+                  {item.isBlocked && (
+                    <Text style={styles.blockedLabel}>🚫</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        ))}
       </View>
     );
   };
 
-  // 🔹 Show beds inside a room
-  const renderRoomDetails = (room: any) => (
+  // 🔹 Beds in selected room
+  const RoomBeds = ({ room }: { room: any }) => (
     <View style={styles.roomDetails}>
       <Text style={styles.sectionTitle}>Room {room.roomNumber} - Beds</Text>
       {room.beds.map((bed: any) => (
         <TouchableOpacity
           key={bed.bedNumber}
-          style={[styles.bedRow, bed.occupied ? styles.bedOccupied : styles.bedAvailable]}
+          style={[
+            styles.bedRow,
+            bed.occupied ? styles.bedOccupied : styles.bedAvailable,
+          ]}
           disabled={bed.occupied}
           onPress={() => bookBed(room.roomNumber, bed.bedNumber)}
         >
@@ -174,10 +233,45 @@ export default function StudentHostelView() {
 
   return (
     <View style={styles.container}>
-      {!assignedBlock ? (
-        <Text style={styles.sectionTitle}>No block assigned yet</Text>
+      {!assignedBlocks.length ? (
+        <Text style={styles.sectionTitle}>
+          {loading ? "Loading…" : "No block assigned yet"}
+        </Text>
       ) : (
-        <>
+        <ScrollView
+          contentContainerStyle={{ paddingBottom: 24 }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+        >
+          {/* Block switcher if multiple blocks */}
+          {assignedBlocks.length > 1 && (
+            <View style={styles.blockSwitcher}>
+              {assignedBlocks.map((b, i) => (
+                <TouchableOpacity
+                  key={`${b.blockName}-${i}`}
+                  style={[
+                    styles.blockPill,
+                    i === activeBlockIdx && styles.blockPillActive,
+                  ]}
+                  onPress={() => {
+                    setSelectedRoom(null);
+                    setActiveBlockIdx(i);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.blockPillText,
+                      i === activeBlockIdx && styles.blockPillTextActive,
+                    ]}
+                  >
+                    {b.blockName}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Back to rooms when inside a room */}
           {selectedRoom && (
             <TouchableOpacity
               onPress={() => setSelectedRoom(null)}
@@ -187,9 +281,10 @@ export default function StudentHostelView() {
             </TouchableOpacity>
           )}
 
-          {renderRooms(assignedBlock.floors)}
-          {selectedRoom && renderRoomDetails(selectedRoom)}
-        </>
+          {/* Rooms / Beds */}
+          {activeBlock && <RoomGrid block={activeBlock} />}
+          {selectedRoom && <RoomBeds room={selectedRoom} />}
+        </ScrollView>
       )}
     </View>
   );
@@ -199,12 +294,29 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 12, backgroundColor: "#F9FAFB" },
   sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
 
+  // Block switcher
+  blockSwitcher: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  blockPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#E5E7EB",
+  },
+  blockPillActive: {
+    backgroundColor: "#2563EB",
+  },
+  blockPillText: { color: "#111827", fontWeight: "600" },
+  blockPillTextActive: { color: "#fff" },
+
   // Rooms
   roomsContainer: { marginTop: 12 },
   roomBox: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 6,
+    // width/height/margins applied inline from ITEM/GAP for perfect math
     borderRadius: 10,
     backgroundColor: "#F3F4F6",
     justifyContent: "center",
@@ -256,7 +368,18 @@ const styles = StyleSheet.create({
     color: "#065F46",
     marginBottom: 16,
   },
-  allocationRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  allocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   allocationIcon: { fontSize: 20, marginRight: 10 },
   allocationText: { fontSize: 16, fontWeight: "600", color: "#111827" },
+  floorTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 8,
+    marginTop: 12,
+  },
 });

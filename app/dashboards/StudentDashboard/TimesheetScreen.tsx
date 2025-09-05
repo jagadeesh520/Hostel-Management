@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
+import { WebView } from "react-native-webview";
 
 //const API_BASE = "https://api.sjtechsol.com";
 
@@ -160,6 +161,7 @@ const TimesheetScreen = () => {
   const [messOverdue, setMessOverdue] = useState(0);
   const [estOverdue, setEstOverdue] = useState(0);
   const [payAmount, setPayAmount] = useState("");
+  const [webviewHtml, setWebviewHtml] = useState<string | null>(null);
 
   console.log("messOverdue", messOverdue, estOverdue);
 
@@ -654,78 +656,21 @@ const TimesheetScreen = () => {
       >
         <View style={styles.modalContainer}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>
-              {payKind === "mess" ? "Mess Bill" : "Establishment"} Payment
-            </Text>
-
-            {/* Show overdue */}
-            <Text style={{ marginBottom: 6 }}>
-              Total Overdue: ₹{payKind === "mess" ? messOverdue : estOverdue}
-            </Text>
-
-            {/* Input for partial amount */}
-            <TextInput
-              style={styles.input}
-              placeholder="Enter amount to pay"
-              keyboardType="numeric"
-              value={payAmount}
-              onChangeText={setPayAmount}
-            />
-
-            <View style={styles.modalButtons}>
-              {/* <Pressable
-                onPress={async () => {
-                  try {
-                    if (!payAmount || Number(payAmount) <= 0) {
-                      alert("Enter valid amount");
-                      return;
-                    }
-
-                    const res = await axios.post(
-                      `${API_BASE_URL}/api/payment/initiate`,
-                      {
-                        rollNo,
-                        feeType: payKind,
-                        amount: Number(payAmount),
-                      }
-                    );
-
-                    if (res.data?.redirectUrl) {
-                      Linking.openURL(res.data.redirectUrl); // redirect to BillDesk
-                    } else {
-                      alert("Payment initiation failed.");
-                    }
+            {webviewHtml ? (
+              // Show BillDesk inside WebView
+              <WebView
+                originWhitelist={["*"]}
+                source={{ html: webviewHtml }}
+                javaScriptEnabled
+                domStorageEnabled
+                startInLoadingState
+                onNavigationStateChange={async (event) => {
+                  if (event.url.includes("sjtechsol.com/payment/response")) {
+                    setWebviewHtml(null);
                     setModalVisible(false);
-                  } catch (err) {
-                    console.error("Payment error:", err);
-                    alert("Payment failed. Try again.");
-                  }
-                }}
-                style={styles.modalPayButton}
-              >
-                <Text style={{ color: "#fff" }}>Pay via BillDesk</Text>
-              </Pressable> */}
-              <Pressable
-                onPress={async () => {
-                  try {
-                    if (!payAmount || Number(payAmount) <= 0) {
-                      alert("Enter valid amount");
-                      return;
-                    }
 
-                    const res = await axios.post(
-                      `${API_BASE_URL}/api/payment/initiate`, // ✅ make sure this matches backend
-                      {
-                        rollNo,
-                        feeType: payKind,
-                        amount: Number(payAmount),
-                      }
-                    );
-
-                    if (res.data?.success) {
-                      alert("Payment successful!");
-
-                      // 🔄 Refresh dues immediately
+                    // 🔄 Refresh dues after payment
+                    try {
                       const messRes = await axios.get(
                         `${API_BASE_URL}/api/mess/dues/${rollNo}`
                       );
@@ -735,28 +680,87 @@ const TimesheetScreen = () => {
                         `${API_BASE_URL}/api/establishment/dues/${rollNo}`
                       );
                       setEstOverdue(estRes.data?.overdue || 0);
-                    } else {
-                      alert("Payment initiation failed.");
+                    } catch (err) {
+                      console.error("Failed to refresh dues", err);
                     }
-
-                    setModalVisible(false);
-                  } catch (err) {
-                    console.error("Payment error:", err);
-                    alert("Payment failed. Try again.");
                   }
                 }}
-                style={styles.modalPayButton}
-              >
-                <Text style={{ color: "#fff" }}>Pay (Dummy)</Text>
-              </Pressable>
+              />
+            ) : (
+              <>
+                <Text style={styles.modalTitle}>
+                  {payKind === "mess" ? "Mess Bill" : "Establishment"} Payment
+                </Text>
 
-              <Pressable
-                onPress={() => setModalVisible(false)}
-                style={styles.modalCancelButton}
-              >
-                <Text style={{ color: "#333" }}>Cancel</Text>
-              </Pressable>
-            </View>
+                <Text style={{ marginBottom: 6 }}>
+                  Total Overdue: ₹
+                  {payKind === "mess" ? messOverdue : estOverdue}
+                </Text>
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter amount to pay"
+                  keyboardType="numeric"
+                  value={payAmount}
+                  onChangeText={setPayAmount}
+                />
+
+                <View style={styles.modalButtons}>
+                  <Pressable
+                    onPress={async () => {
+                      try {
+                        if (!payAmount || Number(payAmount) <= 0) {
+                          alert("Enter valid amount");
+                          return;
+                        }
+
+                        const res = await axios.post(
+                          `${API_BASE_URL}/api/payment/initiate`,
+                          {
+                            rollNo,
+                            feeType: payKind,
+                            amount: Number(payAmount),
+                          }
+                        );
+
+                        const { bdorderid, merchantid, rdata } = res.data || {};
+                        if (bdorderid && merchantid && rdata) {
+                          // Build BillDesk form
+                          const htmlForm = `
+                      <html>
+                      <body>
+                        <form id="payForm" action="https://uat1.billdesk.com/u2/web/v1_2/embeddedsdk" method="POST">
+                          <input type="hidden" name="bdorderid" value="${bdorderid}" />
+                          <input type="hidden" name="merchantid" value="${merchantid}" />
+                          <input type="hidden" name="rdata" value="${rdata}" />
+                        </form>
+                        <script>document.getElementById('payForm').submit();</script>
+                      </body>
+                      </html>
+                    `;
+                          setWebviewHtml(htmlForm);
+                        } else {
+                          alert("Payment initiation failed.");
+                        }
+                      } catch (err) {
+                        console.error("Payment error:", err);
+                        alert("Payment failed. Try again.");
+                      }
+                    }}
+                    style={styles.modalPayButton}
+                  >
+                    <Text style={{ color: "#fff" }}>Pay via BillDesk</Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={() => setModalVisible(false)}
+                    style={styles.modalCancelButton}
+                  >
+                    <Text style={{ color: "#333" }}>Cancel</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>

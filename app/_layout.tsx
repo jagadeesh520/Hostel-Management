@@ -118,6 +118,7 @@ export default function RootLayout() {
             { name: "dashboards/AdminDashboard/addDailyRates", title: "Daily Mess Rates" },
             { name: "dashboards/AdminDashboard/AdminBlockRules", title: "Block Assignment" },
             { name: "dashboards/AdminDashboard/AdminHostelView", title: "Admin Hostel View" },
+            { name: "dashboards/AdminDashboard/AdminFaceUpdateScreen", title: "Face Update" },
             { name: "dashboards/WardenDashboard/WardenDashbord", title: "Warden Dashboard" },
             { name: "dashboards/WardenDashboard/WardenTickets", title: "Assigned Tickets" },
             { name: "dashboards/WardenDashboard/StudentListScreen", title: "Take Attendance" },

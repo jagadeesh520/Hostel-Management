@@ -4,17 +4,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    FlatList,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  FlatList,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-//const API_BASE = `${API_BASE_URL}/api/hostels";
+// --- Grid constants (4 columns, uniform squares) ---
+const NUM_COLS = 4;
+const GAP = 12;                // spacing between tiles
+const SCREEN_W = Dimensions.get("window").width;
+// parent container has padding: 12 left + 12 right
+const PARENT_PAD = 24;
+const TOTAL_GAPS = GAP * (NUM_COLS - 1);
+const ITEM = Math.floor((SCREEN_W - PARENT_PAD - TOTAL_GAPS) / NUM_COLS);
 
 export default function WardenHostelView() {
   const [blocks, setBlocks] = useState<any[]>([]);
@@ -62,15 +70,20 @@ export default function WardenHostelView() {
         <Text style={styles.sectionTitle}>Rooms in {block.name}</Text>
         <FlatList
           data={allRooms}
-          numColumns={4}
+          numColumns={NUM_COLS}
           keyExtractor={(item) => item.roomNumber}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <TouchableOpacity
               style={[
                 styles.roomBox,
                 getRoomStyle(item),
-                selectedRoom?.roomNumber === item.roomNumber &&
-                  styles.roomSelected,
+                selectedRoom?.roomNumber === item.roomNumber && styles.roomSelected,
+                {
+                  width: ITEM,
+                  height: ITEM,
+                  marginRight: index % NUM_COLS !== NUM_COLS - 1 ? GAP : 0,
+                  marginBottom: GAP,
+                },
               ]}
               onPress={() => {
                 if (item.isBlocked) {
@@ -82,8 +95,7 @@ export default function WardenHostelView() {
             >
               <Text style={styles.roomText}>{item.roomNumber}</Text>
               <Text style={styles.bedsCount}>
-                {item.beds.filter((b: any) => b.occupied).length}/
-                {item.beds.length}
+                {item.beds.filter((b: any) => b.occupied).length}/{item.beds.length}
               </Text>
             </TouchableOpacity>
           )}
@@ -204,9 +216,7 @@ const styles = StyleSheet.create({
   // 🔹 Rooms
   roomsContainer: { marginTop: 12 },
   roomBox: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 6,
+    // dimensions & margins are applied inline for perfect math
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",

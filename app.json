@@ -10,36 +10,31 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to pick up campus location",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "We need your location to pick up campus location"
+      },
       "config": {
-        "usesNonExemptEncryption": false
+        "googleMapsApiKey": "YOUR_IOS_GOOGLE_MAPS_API_KEY"
       }
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "softwareKeyboardLayoutMode": "pan",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "INTERNET",
-        "CAMERA",
-        "RECORD_AUDIO"
+        "INTERNET"
       ],
       "config": {
         "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+          "apiKey": "YOUR_ANDROID_GOOGLE_MAPS_API_KEY"
         }
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.anonymous.hostelapp"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       "expo-router",
@@ -63,20 +58,14 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow location tracking for attendance",
-          "isIosBackgroundLocationEnabled": true
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to access your location while using the app",
+          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to access your location even in background"
         }
       ],
       "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "8c6165a5-1df1-433f-96c9-0b951c3f2353"
-      }
     }
   }
 }

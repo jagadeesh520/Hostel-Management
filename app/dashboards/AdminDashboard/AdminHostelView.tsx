@@ -5,6 +5,7 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import {
   Alert,
+  Dimensions,
   FlatList,
   SafeAreaView,
   StyleSheet,
@@ -15,6 +16,15 @@ import {
 import Dialog from "react-native-dialog";
 
 const API_BASE = `${API_BASE_URL}/api/hostels`;
+
+// --- Grid constants (uniform squares) ---
+const NUM_COLS = 4;
+const GAP = 12; // spacing between tiles
+const SCREEN_W = Dimensions.get("window").width;
+// parent container has padding: 12 left + 12 right
+const PARENT_PAD = 24;
+const TOTAL_GAPS = GAP * (NUM_COLS - 1);
+const ITEM = Math.floor((SCREEN_W - PARENT_PAD - TOTAL_GAPS) / NUM_COLS);
 
 export default function AdminHostelView() {
   const [blocks, setBlocks] = useState<any[]>([]);
@@ -73,7 +83,7 @@ export default function AdminHostelView() {
     }
   };
 
-  // 🔹 NEW: Unallocate all students in a block
+  // 🔹 Unallocate all students in a block
   const unallocateBlock = (blockName: string) => {
     setTargetBlock(blockName);
     setShowDialog(true);
@@ -89,7 +99,7 @@ export default function AdminHostelView() {
       );
       Alert.alert(
         "🎉 Success",
-        `All students in  ${targetBlock} have been unallocated`
+        `All students in ${targetBlock} have been unallocated`
       );
       fetchBlocks();
       setSelectedBlock(null);
@@ -120,7 +130,6 @@ export default function AdminHostelView() {
 
     return (
       <>
-        {/* Your main UI */}
         <Dialog.Container visible={showDialog}>
           <Dialog.Title>⚠️ Confirm Unallocation</Dialog.Title>
           <Dialog.Description>
@@ -134,7 +143,7 @@ export default function AdminHostelView() {
         <View style={styles.roomsContainer}>
           <View style={styles.roomHeader}>
             <Text style={styles.sectionTitle}>Rooms in {block.name}</Text>
-            {/* Unallocate Block Button */}
+
             <TouchableOpacity
               style={styles.unallocateBtn}
               onPress={() => unallocateBlock(block.name)}
@@ -147,15 +156,21 @@ export default function AdminHostelView() {
 
           <FlatList
             data={allRooms}
-            numColumns={4}
+            numColumns={NUM_COLS}
             keyExtractor={(item) => item.roomNumber}
-            renderItem={({ item }) => (
+            renderItem={({ item, index }) => (
               <TouchableOpacity
                 style={[
                   styles.roomBox,
                   getRoomStyle(item),
                   selectedRoom?.roomNumber === item.roomNumber &&
                     styles.roomSelected,
+                  {
+                    width: ITEM,
+                    height: ITEM,
+                    marginRight: index % NUM_COLS !== NUM_COLS - 1 ? GAP : 0,
+                    marginBottom: GAP,
+                  },
                 ]}
                 onPress={() => setSelectedRoom(item)}
                 onLongPress={() =>
@@ -302,9 +317,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   roomBox: {
-    flex: 1,
-    aspectRatio: 1,
-    margin: 6,
+    // width/height/margins applied inline from ITEM/GAP for perfect math
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",

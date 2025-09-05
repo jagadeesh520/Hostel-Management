@@ -167,6 +167,12 @@ export default function AdminDashboard() {
       color: "#6366F1", // Indigo  → hostel/building theme
       route: "/dashboards/AdminDashboard/AdminHostelView",
     },
+    {
+    label: "Face Update to DB",
+    icon: <FontAwesome5 name="id-card" size={20} color="white" />, // ✅ better suited icon
+    color: "#6366F1", // Indigo
+    route: "/dashboards/AdminDashboard/AdminFaceUpdateScreen",
+  },
   ];
 
   const handleNavigation = (item: MenuItem) => {
