@@ -1,8 +1,10 @@
 import { API_BASE_URL } from "@/constants/config";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
@@ -12,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // --- Grid constants (uniform squares) ---
 const NUM_COLS = 4;
@@ -34,10 +37,12 @@ export default function StudentHostelView() {
   const [student, setStudent] = useState<any | null>(null);
   const [assignedBlocks, setAssignedBlocks] = useState<any[]>([]);
   const [activeBlockIdx, setActiveBlockIdx] = useState(0);
-
   const [selectedRoom, setSelectedRoom] = useState<any | null>(null);
   const [myBooking, setMyBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
+  
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     fetchAssignedBlocksAndBooking();
@@ -80,6 +85,7 @@ export default function StudentHostelView() {
   // 🔹 Book bed
   const bookBed = async (roomNumber: string, bedNumber: number) => {
     try {
+      setBookingInProgress(true);
       const token = await AsyncStorage.getItem("studentToken");
       const rollNo = await AsyncStorage.getItem("rollNo");
       if (!activeBlock) return;
@@ -101,6 +107,8 @@ export default function StudentHostelView() {
       );
     } catch (err: any) {
       Alert.alert("Error", err?.response?.data?.error || "Booking failed");
+    } finally {
+      setBookingInProgress(false);
     }
   };
 
@@ -110,39 +118,74 @@ export default function StudentHostelView() {
       assignedBlocks.find((b) => b.blockName === myBooking.blockName) || null;
 
     return (
-      <View style={styles.container}>
-        <Text style={styles.sectionTitle}>My Hostel Allocation</Text>
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>My Hostel Allocation</Text>
+        </View>
+        
         <View style={styles.allocationCard}>
-          <Text style={styles.successIcon}>✅</Text>
+          <View style={styles.successIconContainer}>
+            <Ionicons name="checkmark-circle" size={60} color="#10b981" />
+          </View>
           <Text style={styles.allocationTitle}>Booking Confirmed</Text>
+          <Text style={styles.allocationSubtitle}>Your room has been successfully allocated</Text>
+
+          <View style={styles.allocationDivider} />
 
           <View style={styles.allocationRow}>
-            <Text style={styles.allocationIcon}>👤</Text>
-            <Text style={styles.allocationText}>
-              {student?.name} ({student?.rollNo})
-            </Text>
+            <View style={styles.allocationIconContainer}>
+              <Ionicons name="person" size={20} color="#3b82f6" />
+            </View>
+            <View style={styles.allocationTextContainer}>
+              <Text style={styles.allocationLabel}>Student</Text>
+              <Text style={styles.allocationText}>
+                {student?.studentName} ({student?.rollNo})
+              </Text>
+            </View>
           </View>
 
           <View style={styles.allocationRow}>
-            <Text style={styles.allocationIcon}>🏢</Text>
-            <Text style={styles.allocationText}>
-              {myBooking.blockName}
-              {bookedBlock?.type ? ` (${bookedBlock.type})` : ""}
-            </Text>
+            <View style={styles.allocationIconContainer}>
+              <Ionicons name="business" size={20} color="#3b82f6" />
+            </View>
+            <View style={styles.allocationTextContainer}>
+              <Text style={styles.allocationLabel}>Block</Text>
+              <Text style={styles.allocationText}>
+                {myBooking.blockName}
+                {bookedBlock?.type ? ` (${bookedBlock.type})` : ""}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.allocationRow}>
-            <Text style={styles.allocationIcon}>🚪</Text>
-            <Text style={styles.allocationText}>
-              Room {myBooking.roomNumber}
-            </Text>
+            <View style={styles.allocationIconContainer}>
+              <MaterialCommunityIcons name="door" size={20} color="#3b82f6" />
+            </View>
+            <View style={styles.allocationTextContainer}>
+              <Text style={styles.allocationLabel}>Room</Text>
+              <Text style={styles.allocationText}>{myBooking.roomNumber}</Text>
+            </View>
           </View>
 
           <View style={styles.allocationRow}>
-            <Text style={styles.allocationIcon}>🛏️</Text>
-            <Text style={styles.allocationText}>Bed {myBooking.bedNumber}</Text>
+            <View style={styles.allocationIconContainer}>
+              <Ionicons name="bed" size={20} color="#3b82f6" />
+            </View>
+            <View style={styles.allocationTextContainer}>
+              <Text style={styles.allocationLabel}>Bed</Text>
+              <Text style={styles.allocationText}>{myBooking.bedNumber}</Text>
+            </View>
           </View>
         </View>
+      </View>
+    );
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.centered, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+        <Text style={styles.loadingText}>Loading hostel information...</Text>
       </View>
     );
   }
@@ -154,51 +197,76 @@ export default function StudentHostelView() {
     return (
       <View style={styles.roomsContainer}>
         <Text style={styles.sectionTitle}>
-          Rooms in {block?.blockName} {block?.type ? `(${block.type})` : ""}
+          Available Rooms in {block?.blockName} {block?.type ? `(${block.type})` : ""}
+        </Text>
+        <Text style={styles.sectionSubtitle}>
+          Select a room to view available beds
         </Text>
 
         {floors.map((floor: any, idx: number) => (
           <View key={idx} style={{ marginBottom: 20 }}>
-            <Text style={styles.floorTitle}>
-              {ordinal(floor.floorNumber)} Floor
-            </Text>
+            <View style={styles.floorHeader}>
+              <Ionicons name="layers" size={20} color="#6b7280" />
+              <Text style={styles.floorTitle}>
+                {ordinal(floor.floorNumber)} Floor
+              </Text>
+            </View>
 
             <FlatList
               data={floor.rooms}
               numColumns={NUM_COLS}
               keyExtractor={(item) => item.roomNumber}
-              scrollEnabled={false}            // ⬅️ let the outer ScrollView scroll
-              renderItem={({ item, index }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.roomBox,
-                    item.isBlocked && styles.roomBlocked,
-                    selectedRoom?.roomNumber === item.roomNumber &&
-                      styles.roomSelected,
-                    {
-                      width: ITEM,
-                      height: ITEM,
-                      marginRight: index % NUM_COLS !== NUM_COLS - 1 ? GAP : 0,
-                      marginBottom: GAP,
-                    },
-                  ]}
-                  onPress={() => {
-                    if (item.isBlocked) {
-                      Alert.alert("Blocked", "This room is blocked by Admin");
-                    } else {
-                      setSelectedRoom(item);
-                    }
-                  }}
-                >
-                  <Text style={styles.roomText}>{item.roomNumber}</Text>
-                  <Text style={styles.bedsCount}>
-                    {item.beds?.length || 0} beds
-                  </Text>
-                  {item.isBlocked && (
-                    <Text style={styles.blockedLabel}>🚫</Text>
-                  )}
-                </TouchableOpacity>
-              )}
+              scrollEnabled={false}
+              renderItem={({ item, index }) => {
+                const availableBeds = item.beds?.filter((bed: any) => !bed.occupied).length || 0;
+                const totalBeds = item.beds?.length || 0;
+                
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.roomBox,
+                      item.isBlocked && styles.roomBlocked,
+                      selectedRoom?.roomNumber === item.roomNumber &&
+                        styles.roomSelected,
+                      {
+                        width: ITEM,
+                        height: ITEM,
+                        marginRight: index % NUM_COLS !== NUM_COLS - 1 ? GAP : 0,
+                        marginBottom: GAP,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (item.isBlocked) {
+                        Alert.alert("Blocked", "This room is blocked by Admin");
+                      } else if (availableBeds === 0) {
+                        Alert.alert("Full", "This room has no available beds");
+                      } else {
+                        setSelectedRoom(item);
+                      }
+                    }}
+                  >
+                    <View style={styles.roomBoxContent}>
+                      <Text style={styles.roomText}>{item.roomNumber}</Text>
+                      <View style={styles.roomStats}>
+                        <Ionicons name="bed" size={12} color="#6b7280" />
+                        <Text style={styles.bedsCount}>
+                          {availableBeds}/{totalBeds}
+                        </Text>
+                      </View>
+                      {item.isBlocked && (
+                        <View style={styles.blockedBadge}>
+                          <Text style={styles.blockedText}>Blocked</Text>
+                        </View>
+                      )}
+                      {availableBeds === 0 && !item.isBlocked && (
+                        <View style={styles.fullBadge}>
+                          <Text style={styles.fullText}>Full</Text>
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
             />
           </View>
         ))}
@@ -207,67 +275,129 @@ export default function StudentHostelView() {
   };
 
   // 🔹 Beds in selected room
-  const RoomBeds = ({ room }: { room: any }) => (
-    <View style={styles.roomDetails}>
-      <Text style={styles.sectionTitle}>Room {room.roomNumber} - Beds</Text>
-      {room.beds.map((bed: any) => (
-        <TouchableOpacity
-          key={bed.bedNumber}
-          style={[
-            styles.bedRow,
-            bed.occupied ? styles.bedOccupied : styles.bedAvailable,
-          ]}
-          disabled={bed.occupied}
-          onPress={() => bookBed(room.roomNumber, bed.bedNumber)}
-        >
-          <Text style={styles.bedText}>Bed {bed.bedNumber}</Text>
-          <Text style={styles.studentText}>
-            {bed.occupied
-              ? `Occupied by ${bed.studentId?.studentName || "Unknown"}`
-              : "Available - Tap to Book"}
+  const RoomBeds = ({ room }: { room: any }) => {
+    const availableBeds = room.beds.filter((bed: any) => !bed.occupied);
+    
+    return (
+      <View style={styles.roomDetails}>
+        <View style={styles.roomDetailsHeader}>
+          <Text style={styles.sectionTitle}>Room {room.roomNumber}</Text>
+          <Text style={styles.roomSubtitle}>
+            {availableBeds.length} bed{availableBeds.length !== 1 ? 's' : ''} available
           </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+        </View>
+        
+        {room.beds.map((bed: any) => (
+          <TouchableOpacity
+            key={bed.bedNumber}
+            style={[
+              styles.bedCard,
+              bed.occupied ? styles.bedOccupied : styles.bedAvailable,
+            ]}
+            disabled={bed.occupied || bookingInProgress}
+            onPress={() => bookBed(room.roomNumber, bed.bedNumber)}
+          >
+            <View style={styles.bedHeader}>
+              <View style={styles.bedInfo}>
+                <Ionicons 
+                  name="bed" 
+                  size={20} 
+                  color={bed.occupied ? "#9ca3af" : "#3b82f6"} 
+                />
+                <Text style={[
+                  styles.bedText,
+                  bed.occupied && styles.bedTextOccupied
+                ]}>
+                  Bed {bed.bedNumber}
+                </Text>
+              </View>
+              <View style={[
+                styles.bedStatus,
+                { backgroundColor: bed.occupied ? '#f3f4f6' : '#dbeafe' }
+              ]}>
+                <Text style={[
+                  styles.bedStatusText,
+                  { color: bed.occupied ? '#6b7280' : '#2563eb' }
+                ]}>
+                  {bed.occupied ? 'Occupied' : 'Available'}
+                </Text>
+              </View>
+            </View>
+            
+            {bed.occupied ? (
+              <Text style={styles.occupantText}>
+                Occupied by {bed.studentId?.studentName || "Unknown"}
+              </Text>
+            ) : (
+              <TouchableOpacity
+                style={styles.bookButton}
+                onPress={() => bookBed(room.roomNumber, bed.bedNumber)}
+                disabled={bookingInProgress}
+              >
+                {bookingInProgress ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={16} color="#ffffff" />
+                    <Text style={styles.bookButtonText}>Book This Bed</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container]}>
       {!assignedBlocks.length ? (
-        <Text style={styles.sectionTitle}>
-          {loading ? "Loading…" : "No block assigned yet"}
-        </Text>
+        <View style={styles.emptyState}>
+          <Ionicons name="business" size={64} color="#d1d5db" />
+          <Text style={styles.emptyStateTitle}>No Block Assigned</Text>
+          <Text style={styles.emptyStateText}>
+            You haven't been assigned to any hostel block yet.
+          </Text>
+        </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: 24 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
           nestedScrollEnabled
-          showsVerticalScrollIndicator
+          showsVerticalScrollIndicator={false}
         >
           {/* Block switcher if multiple blocks */}
           {assignedBlocks.length > 1 && (
-            <View style={styles.blockSwitcher}>
-              {assignedBlocks.map((b, i) => (
-                <TouchableOpacity
-                  key={`${b.blockName}-${i}`}
-                  style={[
-                    styles.blockPill,
-                    i === activeBlockIdx && styles.blockPillActive,
-                  ]}
-                  onPress={() => {
-                    setSelectedRoom(null);
-                    setActiveBlockIdx(i);
-                  }}
-                >
-                  <Text
+            <View style={styles.blockSwitcherContainer}>
+              <Text style={styles.blockSwitcherTitle}>Select Block</Text>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.blockSwitcher}
+              >
+                {assignedBlocks.map((b, i) => (
+                  <TouchableOpacity
+                    key={`${b.blockName}-${i}`}
                     style={[
-                      styles.blockPillText,
-                      i === activeBlockIdx && styles.blockPillTextActive,
+                      styles.blockPill,
+                      i === activeBlockIdx && styles.blockPillActive,
                     ]}
+                    onPress={() => {
+                      setSelectedRoom(null);
+                      setActiveBlockIdx(i);
+                    }}
                   >
-                    {b.blockName}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.blockPillText,
+                        i === activeBlockIdx && styles.blockPillTextActive,
+                      ]}
+                    >
+                      {b.blockName}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -275,9 +405,10 @@ export default function StudentHostelView() {
           {selectedRoom && (
             <TouchableOpacity
               onPress={() => setSelectedRoom(null)}
-              style={styles.backBtn}
+              style={styles.backButton}
             >
-              <Text style={styles.backText}>← Back to Rooms</Text>
+              <Ionicons name="arrow-back" size={20} color="#3b82f6" />
+              <Text style={styles.backText}>Back to Rooms</Text>
             </TouchableOpacity>
           )}
 
@@ -291,95 +422,343 @@ export default function StudentHostelView() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12, backgroundColor: "#F9FAFB" },
-  sectionTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
-
-  // Block switcher
-  blockSwitcher: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 8,
+  container: { 
+    flex: 1, 
+    backgroundColor: "#F9FAFB" 
   },
-  blockPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#E5E7EB",
-  },
-  blockPillActive: {
-    backgroundColor: "#2563EB",
-  },
-  blockPillText: { color: "#111827", fontWeight: "600" },
-  blockPillTextActive: { color: "#fff" },
-
-  // Rooms
-  roomsContainer: { marginTop: 12 },
-  roomBox: {
-    // width/height/margins applied inline from ITEM/GAP for perfect math
-    borderRadius: 10,
-    backgroundColor: "#F3F4F6",
+  centered: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
-    padding: 4,
+    backgroundColor: "#F9FAFB"
   },
-  roomSelected: { borderWidth: 2, borderColor: "#2563EB" },
-  roomBlocked: { backgroundColor: "#FEE2E2" },
-  roomText: { fontWeight: "700", fontSize: 14, color: "#111827" },
-  bedsCount: { fontSize: 12, color: "#4B5563", marginTop: 4 },
-  blockedLabel: { color: "red", fontSize: 12, fontWeight: "700" },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#6b7280"
+  },
+  header: {
+    padding: 20,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb"
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#111827",
+    marginBottom: 4
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#6b7280"
+  },
+  
+  // Block switcher
+  blockSwitcherContainer: {
+    padding: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb"
+  },
+  blockSwitcherTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12
+  },
+  blockSwitcher: {
+    flexDirection: "row",
+  },
+  blockPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#f3f4f6",
+    marginRight: 8
+  },
+  blockPillActive: {
+    backgroundColor: "#3b82f6",
+  },
+  blockPillText: { 
+    color: "#6b7280", 
+    fontWeight: "500" 
+  },
+  blockPillTextActive: { 
+    color: "#fff" 
+  },
 
-  // Beds
-  roomDetails: { marginTop: 20 },
-  bedRow: {
+  // Rooms
+  roomsContainer: { 
+    padding: 16 
+  },
+  sectionTitle: { 
+    fontSize: 20, 
+    fontWeight: "700", 
+    color: "#111827",
+    marginBottom: 4
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 16
+  },
+  floorHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+    marginTop: 8
+  },
+  floorTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginLeft: 8
+  },
+  roomBox: {
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    padding: 8,
+  },
+  roomBoxContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    height: "100%",
+    position: "relative"
+  },
+  roomSelected: { 
+    borderWidth: 2, 
+    borderColor: "#3b82f6" 
+  },
+  roomBlocked: { 
+    backgroundColor: "#fef2f2" 
+  },
+  roomText: { 
+    fontWeight: "700", 
+    fontSize: 14, 
+    color: "#111827",
+    marginBottom: 4
+  },
+  roomStats: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  bedsCount: { 
+    fontSize: 12, 
+    color: "#6b7280",
+    fontWeight: "500",
+    marginLeft: 4
+  },
+  blockedBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#ef4444",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  blockedText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700"
+  },
+  fullBadge: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "#9ca3af",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4
+  },
+  fullText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700"
+  },
+
+  // Room Details
+  roomDetails: { 
+    padding: 16 
+  },
+  roomDetailsHeader: {
+    marginBottom: 16
+  },
+  roomSubtitle: {
+    fontSize: 14,
+    color: "#6b7280"
+  },
+  bedCard: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  bedAvailable: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#10b981"
+  },
+  bedOccupied: {
+    borderLeftWidth: 4,
+    borderLeftColor: "#ef4444"
+  },
+  bedHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12
+  },
+  bedInfo: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  bedText: { 
+    fontWeight: "600", 
+    color: "#111827",
+    marginLeft: 8
+  },
+  bedTextOccupied: {
+    color: "#9ca3af"
+  },
+  bedStatus: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12
+  },
+  bedStatusText: {
+    fontSize: 12,
+    fontWeight: "600"
+  },
+  occupantText: {
+    fontSize: 14,
+    color: "#6b7280",
+    fontStyle: "italic"
+  },
+  bookButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#3b82f6",
     padding: 12,
     borderRadius: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
+    marginTop: 8
   },
-  bedAvailable: { backgroundColor: "#DCFCE7" },
-  bedOccupied: { backgroundColor: "#FEE2E2" },
-  bedText: { fontWeight: "700", color: "#111827" },
-  studentText: { fontSize: 14, color: "#374151" },
+  bookButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    marginLeft: 8
+  },
 
   // Back Button
-  backBtn: { marginVertical: 12 },
-  backText: { color: "#2563EB", fontWeight: "700" },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb"
+  },
+  backText: { 
+    color: "#3b82f6", 
+    fontWeight: "500",
+    marginLeft: 8
+  },
 
   // Allocation Card
   allocationCard: {
-    backgroundColor: "#D1FAE5",
-    padding: 24,
+    backgroundColor: "#fff",
+    margin: 20,
     borderRadius: 16,
-    alignItems: "center",
+    padding: 24,
     shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowRadius: 12,
+    elevation: 5,
+    alignItems: "center"
   },
-  successIcon: { fontSize: 40, marginBottom: 10 },
+  successIconContainer: {
+    marginBottom: 16
+  },
   allocationTitle: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: "700",
     color: "#065F46",
-    marginBottom: 16,
+    marginBottom: 8,
+    textAlign: "center"
+  },
+  allocationSubtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    textAlign: "center",
+    marginBottom: 24
+  },
+  allocationDivider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    width: "100%",
+    marginBottom: 24
   },
   allocationRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 20,
+    width: "100%"
   },
-  allocationIcon: { fontSize: 20, marginRight: 10 },
-  allocationText: { fontSize: 16, fontWeight: "600", color: "#111827" },
-  floorTitle: {
-    fontSize: 16,
-    fontWeight: "700",
+  allocationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#eff6ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16
+  },
+  allocationTextContainer: {
+    flex: 1
+  },
+  allocationLabel: {
+    fontSize: 14,
+    color: "#6b7280",
+    marginBottom: 4
+  },
+  allocationText: { 
+    fontSize: 16, 
+    fontWeight: "600", 
+    color: "#111827" 
+  },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 40
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: "600",
     color: "#374151",
-    marginBottom: 8,
-    marginTop: 12,
+    marginTop: 16,
+    marginBottom: 8
   },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#6b7280",
+    textAlign: "center"
+  }
 });

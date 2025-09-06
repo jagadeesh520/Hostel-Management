@@ -402,7 +402,7 @@ export default function WardenDashboard() {
               router.push("/dashboards/WardenDashboard/WardenLeaveDashboard")
             }
           />
-          <Card
+          {/* <Card
             title="Attendance"
             value={`${presentStudents}/${totalStudents}`}
             color="#56CCF2"
@@ -410,7 +410,7 @@ export default function WardenDashboard() {
             onPress={() =>
               router.push("/dashboards/WardenDashboard/AttendanceChild")
             }
-          />
+          /> */}
           <Card
             title="Rooms"
             value={wardens.length}
