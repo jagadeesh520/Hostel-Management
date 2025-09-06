@@ -76,7 +76,7 @@ export default function StudentLogin() {
       }
 
       if (response.ok) {
-        await AsyncStorage.setItem("studentToken", JSON.stringify(data.token));
+        await AsyncStorage.setItem("studentToken", data.token);
         if (data?.student?.rollNo) {
           await AsyncStorage.setItem("rollNo", data.student.rollNo);
         }

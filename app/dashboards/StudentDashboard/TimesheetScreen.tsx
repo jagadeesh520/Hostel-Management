@@ -665,17 +665,23 @@ const TimesheetScreen = () => {
                 domStorageEnabled
                 startInLoadingState
                 onNavigationStateChange={async (event) => {
-                  if (event.url.includes("sjtechsol.com/payment/response")) {
+                  // replace this:
+                  // if (event.url.includes("sjtechsol.com/payment/response")) { ... }
+
+                  // with this generic check for the RU path you configured on the server:
+                  if (
+                    event.url.includes("/payment/response") ||
+                    event.url.includes("/payment/response?")
+                  ) {
                     setWebviewHtml(null);
                     setModalVisible(false);
 
-                    // 🔄 Refresh dues after payment
+                    // Refresh dues after payment
                     try {
                       const messRes = await axios.get(
                         `${API_BASE_URL}/api/mess/dues/${rollNo}`
                       );
                       setMessOverdue(messRes.data?.overdue || 0);
-
                       const estRes = await axios.get(
                         `${API_BASE_URL}/api/establishment/dues/${rollNo}`
                       );
@@ -724,27 +730,71 @@ const TimesheetScreen = () => {
                         );
 
                         const { bdorderid, merchantid, rdata } = res.data || {};
-                        if (bdorderid && merchantid && rdata) {
-                          // Build BillDesk form
+                        if (bdorderid && rdata) {
+                          // defensive escaping for single quotes to avoid breaking the HTML string
+                          const esc = (s: any) =>
+                            String(s ?? "")
+                              .replace(/&/g, "&amp;")
+                              .replace(/'/g, "&#39;")
+                              .replace(/"/g, "&quot;");
+
                           const htmlForm = `
-                      <html>
-                      <body>
-                        <form id="payForm" action="https://uat1.billdesk.com/u2/web/v1_2/embeddedsdk" method="POST">
-                          <input type="hidden" name="bdorderid" value="${bdorderid}" />
-                          <input type="hidden" name="merchantid" value="${merchantid}" />
-                          <input type="hidden" name="rdata" value="${rdata}" />
-                        </form>
-                        <script>document.getElementById('payForm').submit();</script>
-                      </body>
-                      </html>
-                    `;
+                        <html>
+                          <body>
+                            <form id="payForm" action="https://uat1.billdesk.com/u2/web/v1_2/embeddedsdk" method="POST">
+                              <input type="hidden" name="bdorderid" value='${esc(bdorderid)}' />
+                              <input type="hidden" name="merchantid" value='${esc(
+                                merchantid || ""
+                              )}' />
+                              <input type="hidden" name="rdata" value='${esc(rdata)}' />
+                            </form>
+                            <script>
+                              // avoid timing issues — give the page a tick then submit
+                              setTimeout(function(){ document.getElementById('payForm').submit(); }, 50);
+                            </script>
+                          </body>
+                        </html>
+                      `;
                           setWebviewHtml(htmlForm);
                         } else {
-                          alert("Payment initiation failed.");
+                          alert(
+                            "Payment initiation failed (missing bdorderid/rdata)."
+                          );
                         }
-                      } catch (err) {
-                        console.error("Payment error:", err);
-                        alert("Payment failed. Try again.");
+                      } catch (err: unknown) {
+                        // Log raw error
+                        console.error("Payment error full (raw):", err);
+
+                        // Narrow the error
+                        let serverMsg: any = "Payment failed";
+                        if (axios.isAxiosError(err)) {
+                          // Axios error: show response data if present, otherwise message
+                          console.error("Payment axios error object:", {
+                            isAxiosError: true,
+                            message: err.message,
+                            code: err.code,
+                            responseData: err.response?.data,
+                            status: err.response?.status,
+                          });
+                          serverMsg = err.response?.data ?? err.message;
+                        } else if (
+                          err &&
+                          typeof err === "object" &&
+                          "message" in err
+                        ) {
+                          // Generic Error-like object
+                          serverMsg = (err as any).message;
+                        } else {
+                          serverMsg = String(err);
+                        }
+
+                        // Alert user (stringify objects so alert shows something readable)
+                        alert(
+                          "Payment failed: " +
+                            (typeof serverMsg === "object"
+                              ? JSON.stringify(serverMsg)
+                              : serverMsg)
+                        );
                       }
                     }}
                     style={styles.modalPayButton}

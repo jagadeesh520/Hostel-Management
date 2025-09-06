@@ -180,14 +180,8 @@ export default function StudentDashboard() {
       title: "Room Book",
       icon: "bed-outline",
       color: "#ba68c8",
-      onPress: () => router.push("/dashboards/StudentDashboard/StudentHostelView"),
-    },
-    {
-      id: "9",
-      title: "Logout",
-      icon: "logout",
-      color: "#f44336",
-      onPress: () => setLogoutModalVisible(true),
+      onPress: () =>
+        router.push("/dashboards/StudentDashboard/StudentHostelView"),
     },
   ];
 
@@ -223,9 +217,17 @@ export default function StudentDashboard() {
             <Text style={styles.subText}>Roll No: {student?.rollNo}</Text>
           </View>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="notifications-outline" size={26} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerIcons}>
+          <TouchableOpacity style={styles.iconButton}>
+            <Ionicons name="notifications-outline" size={26} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.iconButton}
+            onPress={() => setLogoutModalVisible(true)}
+          >
+            <Ionicons name="log-out-outline" size={26} color="#fff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats Section */}
@@ -317,6 +319,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  headerIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15, // Space between icons
+  },
+  iconButton: {
+    padding: 5,
+  },
   avatar: {
     width: 55,
     height: 55,
@@ -349,7 +359,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   statsContainer: {
-    flexDirection: "row",
     backgroundColor: "#6a4cff",
     borderRadius: 16,
     paddingVertical: 15,
@@ -357,18 +366,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statCard: {
-    width: 110,
+    width: 90,
     alignItems: "center",
+    marginHorizontal: 8,
   },
   statValue: {
     fontSize: 20,
     color: "#fff",
     fontWeight: "700",
+    textAlign: "center",
   },
   statLabel: {
     color: "#e0e0e0",
     fontSize: 12,
     marginTop: 4,
+    textAlign: "center",
   },
   row: {
     justifyContent: "space-between",

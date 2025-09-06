@@ -46,7 +46,6 @@
       android:windowSoftInputMode="adjustResize"
       android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|uiMode"
       android:launchMode="singleTask"
-      android:windowSoftInputMode="adjustResize"
       android:theme="@style/Theme.App.SplashScreen"
       android:exported="true"
       android:screenOrientation="portrait">
@@ -57,12 +56,18 @@
       </intent-filter>
       
       <intent-filter>
-        <action android:name="android.intent.action.VIEW"/>
-        <category android:name="android.intent.category.DEFAULT"/>
-        <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="hostelapp"/>
-        <data android:scheme="exp+hostel-app"/>
-      </intent-filter>
+  <action android:name="android.intent.action.VIEW"/>
+  <category android:name="android.intent.category.DEFAULT"/>
+  <category android:name="android.intent.category.BROWSABLE"/>
+  <data android:scheme="hostelapp"/>
+</intent-filter>
+
+<intent-filter>
+  <action android:name="android.intent.action.VIEW"/>
+  <category android:name="android.intent.category.DEFAULT"/>
+  <category android:name="android.intent.category.BROWSABLE"/>
+  <data android:scheme="exp+hostel-app"/>
+</intent-filter>
     </activity>
 </application>
 
