@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#6a4cff",
     borderRadius: 16,
     paddingVertical: 15,
-    paddingHorizontal: 10,
+    paddingHorizontal: 4,
     marginBottom: 20,
   },
   statCard: {
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
   },
   statValue: {
-    fontSize: 20,
+    fontSize: 16,
     color: "#fff",
     fontWeight: "700",
     textAlign: "center",
