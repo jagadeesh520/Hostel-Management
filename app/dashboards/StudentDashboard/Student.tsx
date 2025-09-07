@@ -30,12 +30,6 @@ interface Student {
   faceImage: string;
 }
 
-interface Stat {
-  id: string;
-  value: string;
-  label: string;
-}
-
 interface MenuItem {
   id: string;
   title: string;
@@ -49,10 +43,9 @@ export default function StudentDashboard() {
   const [student, setStudent] = useState<Student | null>(null);
   const [imageError, setImageError] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [achievementsCount, setAchievementsCount] = useState<number | null>(null); // will fetch
 
   const insets = useSafeAreaInsets();
-  const FOOTER_BAR_HEIGHT = 64; // visual height of footer bar (without inset)
-  const footerTotalHeight = FOOTER_BAR_HEIGHT + insets.bottom;
 
   const handleLogout = () => {
     setLogoutModalVisible(false);
@@ -66,7 +59,6 @@ export default function StudentDashboard() {
         const flag = await AsyncStorage.getItem("flash:studentLoggedIn");
         if (alive && flag === "1") {
           await AsyncStorage.removeItem("flash:studentLoggedIn");
-          // tiny delay ensures layout/header are ready
           setTimeout(() => {
             Toast.show({ type: "success", text1: "Login successful 🎉" });
           }, 50);
@@ -79,43 +71,68 @@ export default function StudentDashboard() {
   );
 
   useEffect(() => {
-    const fetchStudent = async () => {
-      const token = await AsyncStorage.getItem("studentToken");
-      const rollNo = await AsyncStorage.getItem("rollNo");
+    const fetchStudentAndCounts = async () => {
+      try {
+        const token = await AsyncStorage.getItem("studentToken");
+        const rollNo = await AsyncStorage.getItem("rollNo");
 
-      if (token?.trim() && rollNo?.trim()) {
+        if (!token?.trim() || !rollNo?.trim()) {
+          console.warn("Missing token or rollNo");
+          return;
+        }
+
+        // fetch student detail
+        const res = await fetch(`${API_BASE_URL}/api/studentAuth/roll/${rollNo}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          await AsyncStorage.setItem("gender", data.gender || "");
+          setStudent(data);
+        } else {
+          console.log("Failed to fetch student:", res.status);
+        }
+
+        // fetch achievements count for this rollNo
+        // server endpoint: GET /api/achievements/by-roll/:rollNo
         try {
-          const res = await fetch(
-            `${API_BASE_URL}/api/studentAuth/roll/${rollNo}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
+          const achRes = await fetch(`${API_BASE_URL}/api/achievements/by-roll/${rollNo}`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (achRes.ok) {
+            const achData = await achRes.json();
+            if (Array.isArray(achData)) {
+              setAchievementsCount(achData.length);
+            } else if (Array.isArray((achData as any).achievements)) {
+              setAchievementsCount((achData as any).achievements.length);
+            } else {
+              // unknown shape — try to infer length
+              const inferred = Array.isArray((achData as any).data)
+                ? (achData as any).data.length
+                : 0;
+              setAchievementsCount(inferred);
             }
-          );
-          if (res.ok) {
-            const data = await res.json();
-            await AsyncStorage.setItem("gender", data.gender);
-            setStudent(data);
           } else {
-            console.log("Failed to fetch student:", res.status);
+            console.warn("Failed to fetch achievements count:", achRes.status);
+            setAchievementsCount(0);
           }
         } catch (err) {
-          console.error("Error fetching student data:", err);
+          console.error("Error fetching achievements for student:", err);
+          setAchievementsCount(0);
         }
-      } else {
-        console.warn("Missing token or rollNo");
+      } catch (err) {
+        console.error("Error in fetchStudentAndCounts:", err);
       }
     };
 
-    fetchStudent();
+    fetchStudentAndCounts();
   }, []);
-
-  const stats: Stat[] = [
-    { id: "1", value: student?.year || "-", label: "Year" },
-    { id: "2", value: student?.roomNo || "-", label: "Room No" },
-    { id: "3", value: student?.blockName || "-", label: "Block" },
-  ];
 
   const menuItems: MenuItem[] = [
     {
@@ -123,8 +140,7 @@ export default function StudentDashboard() {
       title: "Time Sheet",
       icon: "calendar",
       color: "#4cafef",
-      onPress: () =>
-        router.push("/dashboards/StudentDashboard/TimesheetScreen"),
+      onPress: () => router.push("/dashboards/StudentDashboard/TimesheetScreen"),
     },
     {
       id: "2",
@@ -183,6 +199,13 @@ export default function StudentDashboard() {
       onPress: () =>
         router.push("/dashboards/StudentDashboard/StudentHostelView"),
     },
+    {
+      id: "9",
+      title: "Achievements",
+      icon: "trophy",
+      color: "#ff9800",
+      onPress: () => router.push("/dashboards/StudentDashboard/AchievementsScreen"),
+    },
   ];
 
   const renderMenuItem = ({ item }: { item: MenuItem }) => (
@@ -230,21 +253,36 @@ export default function StudentDashboard() {
         </View>
       </View>
 
+      {/* Achievements Banner */}
+      <TouchableOpacity 
+        style={styles.achievementBanner}
+        onPress={() => router.push("/dashboards/StudentDashboard/AchievementsScreen")}
+      >
+        <View style={styles.bannerContent}>
+          <Ionicons name="trophy" size={24} color="#FFF" />
+          <Text style={styles.bannerText}>
+            You have {achievementsCount ?? 0} Achievement{(achievementsCount ?? 0) !== 1 ? 's' : ''}
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color="#FFF" />
+        </View>
+      </TouchableOpacity>
+
       {/* Stats Section */}
       <View style={styles.statsContainer}>
-        <FlatList
-          data={stats}
-          renderItem={({ item }) => (
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{item.value}</Text>
-              <Text style={styles.statLabel}>{item.label}</Text>
-            </View>
-          )}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-        />
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{student?.year || "-"}</Text>
+          <Text style={styles.statLabel}>Year</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{student?.roomNo || "-"}</Text>
+          <Text style={styles.statLabel}>Room No</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statValue}>{student?.blockName || "-"}</Text>
+          <Text style={styles.statLabel}>Block</Text>
+        </View>
       </View>
+      
       {/* Logout Confirmation Modal */}
       <Modal
         animationType="fade"
@@ -288,7 +326,7 @@ export default function StudentDashboard() {
       data={menuItems}
       renderItem={renderMenuItem}
       keyExtractor={(item) => item.id}
-      numColumns={2}
+      numColumns={3}
       columnWrapperStyle={styles.row}
       contentContainerStyle={styles.container}
       ListHeaderComponent={renderHeader}
@@ -313,7 +351,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     borderRadius: 16,
     marginTop: 40,
-    marginBottom: 20,
+    marginBottom: 15,
   },
   profileSection: {
     flexDirection: "row",
@@ -322,7 +360,7 @@ const styles = StyleSheet.create({
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 15, // Space between icons
+    gap: 15,
   },
   iconButton: {
     padding: 5,
@@ -358,17 +396,40 @@ const styles = StyleSheet.create({
     color: "#e0e0e0",
     fontSize: 13,
   },
+  achievementBanner: {
+    backgroundColor: "#FF9800",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bannerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  bannerText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "600",
+    flex: 1,
+    marginLeft: 10,
+  },
   statsContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     backgroundColor: "#6a4cff",
     borderRadius: 16,
-    paddingVertical: 15,
-    paddingHorizontal: 4,
+    padding: 15,
     marginBottom: 20,
   },
   statCard: {
-    width: 90,
     alignItems: "center",
-    marginHorizontal: 8,
+    flex: 1,
   },
   statValue: {
     fontSize: 16,
@@ -398,6 +459,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+    minWidth: 100,
   },
   iconContainer: {
     width: 55,

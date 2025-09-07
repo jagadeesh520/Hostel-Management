@@ -48,7 +48,12 @@ type ValidRoute =
 // --- Reusable in-file hook to show a one-time toast on focus ---
 function useFlashToastOnFocus(
   flagKey: string,
-  opts: { type?: "success" | "error" | "warning" | "info"; text1?: string; text2?: string; delayMs?: number } = {}
+  opts: {
+    type?: "success" | "error" | "warning" | "info";
+    text1?: string;
+    text2?: string;
+    delayMs?: number;
+  } = {}
 ) {
   const { type = "success", text1 = "Success!", text2, delayMs = 50 } = opts;
 
@@ -92,7 +97,10 @@ export default function AdminDashboard() {
   };
 
   // ✅ Show success toast once when arriving after login
-  useFlashToastOnFocus("flash:justLoggedIn", { type: "success", text1: "Login successful 🎉" });
+  useFlashToastOnFocus("flash:justLoggedIn", {
+    type: "success",
+    text1: "Login successful 🎉",
+  });
 
   const menuItems: MenuItem[] = [
     {
@@ -121,7 +129,9 @@ export default function AdminDashboard() {
     },
     {
       label: "Issues",
-      icon: <FontAwesome5 name="exclamation-triangle" size={20} color="white" />,
+      icon: (
+        <FontAwesome5 name="exclamation-triangle" size={20} color="white" />
+      ),
       color: "#FF3B30", // red
       route: "/dashboards/AdminDashboard/reports",
     },
@@ -168,11 +178,17 @@ export default function AdminDashboard() {
       route: "/dashboards/AdminDashboard/AdminHostelView",
     },
     {
-    label: "Face Update to DB",
-    icon: <FontAwesome5 name="id-card" size={20} color="white" />, // ✅ better suited icon
-    color: "#6366F1", // Indigo
-    route: "/dashboards/AdminDashboard/AdminFaceUpdateScreen",
-  },
+      label: "Face Update to DB",
+      icon: <FontAwesome5 name="id-card" size={20} color="white" />, // ✅ better suited icon
+      color: "#6366F1", // Indigo
+      route: "/dashboards/AdminDashboard/AdminFaceUpdateScreen",
+    },
+    {
+      label: "Add Achievement",
+      icon: <FontAwesome5 name="trophy" size={20} color="white" />,
+      color: "#FF9800", // Orange for achievements
+      route: "/dashboards/AdminDashboard/AddAchievement",
+    },
   ];
 
   const handleNavigation = (item: MenuItem) => {
@@ -185,7 +201,9 @@ export default function AdminDashboard() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}>
+      <View
+        style={[styles.header, { paddingTop: Math.max(20, insets.top) + 40 }]}
+      >
         <Text style={styles.headerTitle}>JNTUACEP</Text>
         <Text style={styles.headerSubtitle}>Hostel Management Dashboard</Text>
       </View>
@@ -204,7 +222,9 @@ export default function AdminDashboard() {
               activeOpacity={0.7}
             >
               <View style={styles.menuItemContent}>
-                <View style={[styles.iconCircle, { backgroundColor: item.color }]}>
+                <View
+                  style={[styles.iconCircle, { backgroundColor: item.color }]}
+                >
                   {typeof item.icon === "string" ? (
                     <Text style={styles.iconText}>{item.icon}</Text>
                   ) : (
@@ -219,7 +239,12 @@ export default function AdminDashboard() {
       </ScrollView>
 
       {/* Fixed Footer */}
-      <View style={[styles.fixedFooter, { height: footerTotalHeight, paddingBottom: insets.bottom }]}>
+      <View
+        style={[
+          styles.fixedFooter,
+          { height: footerTotalHeight, paddingBottom: insets.bottom },
+        ]}
+      >
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={() => setLogoutModalVisible(true)}
@@ -240,9 +265,16 @@ export default function AdminDashboard() {
         onRequestClose={() => setLogoutModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: Math.max(20, insets.bottom) }]}>
+          <View
+            style={[
+              styles.modalContent,
+              { paddingBottom: Math.max(20, insets.bottom) },
+            ]}
+          >
             <Text style={styles.modalTitle}>Confirm Logout</Text>
-            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            <Text style={styles.modalMessage}>
+              Are you sure you want to logout?
+            </Text>
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.cancelButton]}
@@ -250,7 +282,10 @@ export default function AdminDashboard() {
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </Pressable>
-              <Pressable style={[styles.modalButton, styles.logoutButtonModal]} onPress={handleLogout}>
+              <Pressable
+                style={[styles.modalButton, styles.logoutButtonModal]}
+                onPress={handleLogout}
+              >
                 <Text style={styles.logoutButtonTextModal}>Logout</Text>
               </Pressable>
             </View>
@@ -260,7 +295,6 @@ export default function AdminDashboard() {
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {

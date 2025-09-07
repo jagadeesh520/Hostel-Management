@@ -114,6 +114,7 @@ export default function RootLayout() {
             { name: "dashboards/AdminDashboard/reports", title: "Reports" },
             { name: "dashboards/AdminDashboard/campusLocationForm", title: "Location" },
             { name: "dashboards/AdminDashboard/BulkUploadStudents", title: "Student Login Details" },
+            { name: "dashboards/AdminDashboard/AddAchievement", title: "Add Achievement" },
             { name: "dashboards/AdminDashboard/AttendanceDashboard", title: "Attendance Dashboard" },
             { name: "dashboards/AdminDashboard/addDailyRates", title: "Daily Mess Rates" },
             { name: "dashboards/AdminDashboard/AdminBlockRules", title: "Block Assignment" },
@@ -138,6 +139,7 @@ export default function RootLayout() {
             { name: "dashboards/StudentDashboard/BlogScreen", title: "Student Blog" },
             { name: "dashboards/StudentDashboard/AttendanceScanner", title: "Self Check-In" },
             { name: "dashboards/StudentDashboard/LeaveApply", title: "Apply Leave" },
+            { name: "dashboards/StudentDashboard/AchievementsScreen", title: "Student Achivements" },
             { name: "dashboards/StudentDashboard/StudentHostelView", title: "Room Booking" },
           ].map((screen) => (
             <Stack.Screen
