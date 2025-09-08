@@ -43,7 +43,7 @@ export default function StudentDashboard() {
   const [student, setStudent] = useState<Student | null>(null);
   const [imageError, setImageError] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
-  const [achievementsCount, setAchievementsCount] = useState<number | null>(null); // will fetch
+  const [achievementsCount, setAchievementsCount] = useState<number | null>(null);
 
   const insets = useSafeAreaInsets();
 
@@ -97,7 +97,6 @@ export default function StudentDashboard() {
         }
 
         // fetch achievements count for this rollNo
-        // server endpoint: GET /api/achievements/by-roll/:rollNo
         try {
           const achRes = await fetch(`${API_BASE_URL}/api/achievements/by-roll/${rollNo}`, {
             headers: {
@@ -328,7 +327,10 @@ export default function StudentDashboard() {
       keyExtractor={(item) => item.id}
       numColumns={3}
       columnWrapperStyle={styles.row}
-      contentContainerStyle={styles.container}
+      contentContainerStyle={[
+        styles.container,
+        { paddingBottom: Math.max(20, insets.bottom + 20) } // Added safe area padding
+      ]}
       ListHeaderComponent={renderHeader}
     />
   ) : (
@@ -340,7 +342,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: "#f5f7ff",
     paddingHorizontal: 15,
-    paddingBottom: 20,
+    paddingBottom: 20, // Base padding
   },
   header: {
     flexDirection: "row",
