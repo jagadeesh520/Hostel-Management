@@ -1,3 +1,4 @@
+// AddMenu.tsx
 import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Picker } from "@react-native-picker/picker";
@@ -21,7 +22,6 @@ import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityI
 type MenuItem = { name: string; category: string; imageUri?: string | null };
 
 const CATEGORIES = ["Veg", "NonVeg"];
-//const BASE_URL = "https://api.sjtechsol.com";
 
 /** ---------- helpers ---------- */
 
@@ -33,12 +33,19 @@ const guessMime = (ext: string) => {
 };
 
 // Ensure we have a streamable file:// URI. For content://, try to copy into cache.
+// Uses runtime-safe access to FileSystem cache/document directory to avoid TS typing issues.
 async function ensureFileUri(inputUri: string | null | undefined) {
   try {
     if (!inputUri) return null;
+    // already a file:// URI
     if (inputUri.startsWith("file://")) return inputUri;
 
-    // Try to copy to cache with a safe extension
+    // runtime-safe access — cast to any to avoid TS errors if typings don't include cacheDirectory
+    const fsAny = FileSystem as any;
+    const runtimeCacheDir: string | undefined =
+      fsAny.cacheDirectory ?? fsAny.documentDirectory ?? undefined;
+
+    // determine extension from uri (or default to jpg)
     const extFromName = (() => {
       const tail = inputUri.split("?")[0].split("#")[0];
       const dot = tail.lastIndexOf(".");
@@ -46,16 +53,28 @@ async function ensureFileUri(inputUri: string | null | undefined) {
       return ext && ext.length <= 5 ? ext : "jpg";
     })();
 
-    const dest = FileSystem.cacheDirectory + `menu_${Date.now()}.${extFromName}`;
+    // if we have a writable cache/document dir, attempt to copy into it
+    if (runtimeCacheDir) {
+      const dest = `${runtimeCacheDir}menu_${Date.now()}.${extFromName}`;
+      try {
+        await FileSystem.copyAsync({ from: inputUri, to: dest });
+        return dest;
+      } catch (copyErr) {
+        // copy failed — fall through to getInfo check below
+        // console.log("copyAsync failed:", copyErr);
+      }
+    }
+
+    // Some URIs (content:// on Android) may be readable directly; check existence
     try {
-      await FileSystem.copyAsync({ from: inputUri, to: dest });
-      return dest;
-    } catch {
-      // Fallback: if copy fails (some content:// sources), try getInfo; if it exists, use original
       const info = await FileSystem.getInfoAsync(inputUri);
       if (info.exists) return inputUri;
-      return null;
+    } catch (infoErr) {
+      // getInfoAsync may throw for some schemes; ignore and return null
+      // console.log("getInfoAsync failed:", infoErr);
     }
+
+    return null;
   } catch {
     return null;
   }
@@ -148,7 +167,7 @@ export default function AddMenu() {
       if (!reachable) {
         Alert.alert(
           "Cannot reach server",
-          "Ensure phone & server are on the same Wi‑Fi and server listens on 0.0.0.0. Try opening the URL on your phone’s browser."
+          "Ensure phone & server are on the same Wi-Fi and server listens on 0.0.0.0. Try opening the URL on your phone’s browser."
         );
         return;
       }

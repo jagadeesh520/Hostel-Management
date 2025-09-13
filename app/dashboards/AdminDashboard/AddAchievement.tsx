@@ -4,7 +4,6 @@ import { FontAwesome5, Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
-import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -195,6 +194,23 @@ const AddAchievement = () => {
     }, 200);
   };
 
+  // helper: create a file object for FormData (works on iOS & Android for common cases)
+  const makeFileForFormData = (uri: string) => {
+    const uriParts = uri.split("/");
+    const name = uriParts[uriParts.length - 1] || `photo.${Date.now()}.jpg`;
+    const match = /\.(\w+)$/.exec(name);
+    const ext = match ? match[1].toLowerCase() : "jpg";
+    const mimeType =
+      ext === "png" ? "image/png" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+    // For iOS ensure file:// prefix exists; for Android leave as-is (content:// or file://)
+    const fileUri = Platform.OS === "ios" && !uri.startsWith("file://") ? `file://${uri}` : uri;
+    return {
+      uri: fileUri,
+      name,
+      type: mimeType,
+    } as any;
+  };
+
   // Main submit: sends multipart if image selected, otherwise JSON
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -220,60 +236,50 @@ const AddAchievement = () => {
         date: date.toISOString().split("T")[0],
       };
 
-      // If an image is selected -> multipart request
+      // If an image is selected -> multipart request using FormData + fetch
       if (image) {
-        // normalize uri for iOS
-        const normalizedUri =
-          Platform.OS === "ios" ? image.replace("file://", "") : image;
-
         // Build query string (defensive: put fields also on URL so server can read req.query if req.body isn't populated)
         const qs = Object.entries(params)
-          .map(
-            ([k, v]) =>
-              `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`
-          )
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
           .join("&");
 
         const uploadUrl = `${API_BASE_URL}/api/achievements?${qs}`;
 
-        console.log(
-          "Submitting multipart to /api/achievements, params:",
-          params
-        );
+        console.log("Submitting multipart to /api/achievements, params:", params);
 
-        // FileSystem.uploadAsync sends multipart/form-data and supports `parameters`
-        const result = await FileSystem.uploadAsync(uploadUrl, normalizedUri, {
-          fieldName: "image", // must match multer.single('image')
-          httpMethod: "POST",
-          headers: {
-            Authorization: `Bearer ${token || ""}`,
-            Accept: "application/json",
-          },
-          parameters: params,
-          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+        const formData = new FormData();
+
+        // Append textual fields (server may prefer them in body)
+        Object.entries(params).forEach(([key, value]) => {
+          formData.append(key, String(value));
         });
 
-        console.log("FileSystem.uploadAsync result:", result);
+        // Append image file
+        const file = makeFileForFormData(image);
+        formData.append("image", file as any);
 
-        if (result.status < 200 || result.status >= 300) {
+        const response = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            // DO NOT set Content-Type; let fetch set the multipart boundary
+            Authorization: `Bearer ${token || ""}`,
+            Accept: "application/json",
+          } as any,
+          body: formData as any,
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => "");
           let parsed;
           try {
-            parsed = JSON.parse(result.body);
+            parsed = JSON.parse(errorBody);
           } catch (e) {
-            parsed = { raw: result.body };
+            parsed = { raw: errorBody };
           }
-          throw new Error(
-            `Server returned ${result.status}: ${JSON.stringify(parsed)}`
-          );
+          throw new Error(`Server returned ${response.status}: ${JSON.stringify(parsed)}`);
         }
 
-        let data;
-        try {
-          data = JSON.parse(result.body);
-        } catch (e) {
-          data = { raw: result.body };
-        }
-
+        const data = await response.json().catch(() => ({}));
         Alert.alert("Success", "Achievement added successfully!");
         console.log("Create response:", data);
 
@@ -389,9 +395,7 @@ const AddAchievement = () => {
           {searchQuery ? "No students found" : "No students available"}
         </Text>
         <Text style={styles.emptySubtext}>
-          {searchQuery
-            ? "Try a different search term"
-            : "Check your connection and try again"}
+          {searchQuery ? "Try a different search term" : "Check your connection and try again"}
         </Text>
       </View>
     );
@@ -475,11 +479,7 @@ const AddAchievement = () => {
                 <Text style={styles.label}>Description *</Text>
                 {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
                 <TextInput
-                  style={[
-                    styles.input,
-                    styles.textArea,
-                    errors.description && styles.inputError,
-                  ]}
+                  style={[styles.input, styles.textArea, errors.description && styles.inputError]}
                   placeholder="Describe the achievement..."
                   value={description}
                   onChangeText={(text) => {
@@ -519,12 +519,7 @@ const AddAchievement = () => {
                 </View>
 
                 <Text style={styles.label}>Awarded By</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., Principal, Sports Committee"
-                  value={awardedBy}
-                  onChangeText={setAwardedBy}
-                />
+                <TextInput style={styles.input} placeholder="e.g., Principal, Sports Committee" value={awardedBy} onChangeText={setAwardedBy} />
 
                 <Text style={styles.label}>Date</Text>
                 <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>

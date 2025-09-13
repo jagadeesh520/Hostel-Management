@@ -3,14 +3,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
-    Alert,
-    FlatList,
-    Modal,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { Dropdown } from "react-native-element-dropdown";
 
@@ -164,7 +164,7 @@ export default function AdminBlockRules() {
               labelField="label"
               valueField="value"
               value={gender}
-              onChange={(item) => setGender(item.value)}
+              onChange={(item:any) => setGender(item.value)}
             />
 
             {/* Year */}
@@ -174,7 +174,7 @@ export default function AdminBlockRules() {
               labelField="label"
               valueField="value"
               value={year}
-              onChange={(item) => setYear(item.value)}
+              onChange={(item:any) => setYear(item.value)}
             />
 
             {/* Block */}
@@ -184,7 +184,7 @@ export default function AdminBlockRules() {
               labelField="label"
               valueField="value"
               value={ruleBlock}
-              onChange={(item) => setRuleBlock(item.value)}
+              onChange={(item:any) => setRuleBlock(item.value)}
             />
 
             <View style={styles.modalActions}>
