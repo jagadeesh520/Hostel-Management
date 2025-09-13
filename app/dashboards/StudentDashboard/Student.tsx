@@ -5,15 +5,18 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
   Image,
   Modal,
   Pressable,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
@@ -38,14 +41,26 @@ interface MenuItem {
   onPress: () => void;
 }
 
+const { width } = Dimensions.get('window');
+
 export default function StudentDashboard() {
   const router = useRouter();
   const [student, setStudent] = useState<Student | null>(null);
   const [imageError, setImageError] = useState(false);
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [achievementsCount, setAchievementsCount] = useState<number | null>(null);
+  const [greeting, setGreeting] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const insets = useSafeAreaInsets();
+
+  useEffect(() => {
+    // Set greeting based on time of day
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Good Morning");
+    else if (hour < 17) setGreeting("Good Afternoon");
+    else setGreeting("Good Evening");
+  }, []);
 
   const handleLogout = () => {
     setLogoutModalVisible(false);
@@ -73,11 +88,13 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchStudentAndCounts = async () => {
       try {
+        setIsLoading(true);
         const token = await AsyncStorage.getItem("studentToken");
         const rollNo = await AsyncStorage.getItem("rollNo");
 
         if (!token?.trim() || !rollNo?.trim()) {
           console.warn("Missing token or rollNo");
+          setIsLoading(false);
           return;
         }
 
@@ -111,11 +128,7 @@ export default function StudentDashboard() {
             } else if (Array.isArray((achData as any).achievements)) {
               setAchievementsCount((achData as any).achievements.length);
             } else {
-              // unknown shape — try to infer length
-              const inferred = Array.isArray((achData as any).data)
-                ? (achData as any).data.length
-                : 0;
-              setAchievementsCount(inferred);
+              setAchievementsCount(0);
             }
           } else {
             console.warn("Failed to fetch achievements count:", achRes.status);
@@ -127,6 +140,8 @@ export default function StudentDashboard() {
         }
       } catch (err) {
         console.error("Error in fetchStudentAndCounts:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -137,15 +152,16 @@ export default function StudentDashboard() {
     {
       id: "1",
       title: "Time Sheet",
-      icon: "calendar",
-      color: "#4cafef",
-      onPress: () => router.push("/dashboards/StudentDashboard/TimesheetScreen"),
+      icon: "calendar-clock",
+      color: "#5e72e4",
+      onPress: () =>
+        router.push("/dashboards/StudentDashboard/TimesheetScreen"),
     },
     {
       id: "2",
-      title: "Self Check-In",
+      title: "Check-In",
       icon: "camera",
-      color: "#4db6ac",
+      color: "#11cdef",
       onPress: async () => {
         if (!student) {
           Alert.alert("Error", "Student data not loaded yet.");
@@ -157,69 +173,144 @@ export default function StudentDashboard() {
     },
     {
       id: "3",
-      title: "Raise Ticket",
-      icon: "chat-processing",
-      color: "#ff8a65",
-      onPress: () => router.push("/dashboards/StudentDashboard/RaiseTicket"),
+      title: "Apply Leave",
+      icon: "calendar-edit",
+      color: "#2dce89",
+      onPress: () => router.push("/dashboards/StudentDashboard/LeaveApply"),
     },
     {
       id: "4",
       title: "My Profile",
       icon: "account-circle",
-      color: "#9575cd",
+      color: "#f5365c",
       onPress: () => router.push("/dashboards/StudentDashboard/MyProfile"),
     },
     {
       id: "5",
-      title: "Blog",
-      icon: "notebook-edit",
-      color: "#f06292",
-      onPress: () => router.push("/dashboards/StudentDashboard/BlogScreen"),
+      title: "Raise Ticket",
+      icon: "help-circle",
+      color: "#fb6340",
+      onPress: () => router.push("/dashboards/StudentDashboard/RaiseTicket"),
     },
     {
       id: "6",
-      title: "Today's Menu",
-      icon: "silverware-fork-knife",
-      color: "#ffd54f",
-      onPress: () => router.push("/dashboards/WardenDashboard/MenuChild"),
+      title: "My Room",
+      icon: "bed",
+      color: "#ffd600",
+      onPress: () =>
+        router.push("/dashboards/StudentDashboard/StudentHostelView"),
     },
     {
       id: "7",
-      title: "Leave Apply",
-      icon: "account-group",
-      color: "#81c784",
-      onPress: () => router.push("/dashboards/StudentDashboard/LeaveApply"),
+      title: "Blog",
+      icon: "notebook-edit",
+      color: "#8965e0",
+      onPress: () => router.push("/dashboards/StudentDashboard/BlogScreen"),
     },
     {
       id: "8",
-      title: "Room Book",
-      icon: "bed-outline",
-      color: "#ba68c8",
-      onPress: () =>
-        router.push("/dashboards/StudentDashboard/StudentHostelView"),
+      title: "Today's Menu",
+      icon: "food",
+      color: "#f3a4b5",
+      onPress: () => router.push("/dashboards/WardenDashboard/MenuChild"),
     },
     {
       id: "9",
       title: "Achievements",
       icon: "trophy",
-      color: "#ff9800",
-      onPress: () => router.push("/dashboards/StudentDashboard/AchievementsScreen"),
+      color: "#ff9700",
+      onPress: () =>
+        router.push("/dashboards/StudentDashboard/AchievementsScreen"),
+    },
+    {
+      id: "10",
+      title: "Upload Challan",
+      icon: "file-upload",
+      color: "#4b7bec",
+      onPress: () =>
+        router.push("/dashboards/StudentDashboard/UploadChallanaScreen"),
+    },
+  ];
+
+  const quickActions = [
+    {
+      id: "1",
+      title: "Attendance",
+      icon: "calendar-check",
+      color: "#5e72e4",
+      onPress: () => router.push("/dashboards/StudentDashboard/TimesheetScreen"),
+    },
+    {
+      id: "2",
+      title: "Meals",
+      icon: "food",
+      color: "#11cdef",
+      onPress: () => router.push("/dashboards/WardenDashboard/MenuChild"),
+    },
+    {
+      id: "3",
+      title: "Leaves",
+      icon: "calendar-remove",
+      color: "#2dce89",
+      onPress: () => router.push("/dashboards/StudentDashboard/LeaveApply"),
     },
   ];
 
   const renderMenuItem = ({ item }: { item: MenuItem }) => (
-    <TouchableOpacity style={styles.menuItem} onPress={item.onPress}>
+    <TouchableOpacity 
+      style={styles.menuItem} 
+      onPress={item.onPress}
+      activeOpacity={0.7}
+    >
       <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-        <MaterialCommunityIcons name={item.icon} size={26} color="#fff" />
+        <MaterialCommunityIcons name={item.icon} size={24} color="#fff" />
       </View>
-      <Text style={styles.menuText}>{item.title}</Text>
+      <Text style={styles.menuText} numberOfLines={2}>{item.title}</Text>
+    </TouchableOpacity>
+  );
+
+  const renderQuickAction = ({ item }: { item: any }) => (
+    <TouchableOpacity 
+      style={styles.quickActionCard}
+      onPress={item.onPress}
+      activeOpacity={0.7}
+    >
+      <View style={styles.quickActionHeader}>
+        <View style={[styles.quickActionIcon, { backgroundColor: `${item.color}20` }]}>
+          <MaterialCommunityIcons 
+            name={item.icon} 
+            size={20} 
+            color={item.color} 
+          />
+        </View>
+        <Text style={styles.quickActionTitle}>{item.title}</Text>
+      </View>
     </TouchableOpacity>
   );
 
   const renderHeader = () => (
     <>
-      {/* Header */}
-      <View style={styles.header}>
+      {/* Header - Fixed to eliminate white gaps */}
+      <View style={[styles.header, { paddingTop: insets.top + 15 }]}>
+        <View style={styles.headerTopRow}>
+          <View>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.username}>{student?.studentName || "Student"}</Text>
+          </View>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconButton}>
+              <Ionicons name="notifications-outline" size={24} color="#fff" />
+              <View style={styles.notificationBadge}></View>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.iconButton}
+              onPress={() => setLogoutModalVisible(true)}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+        
         <View style={styles.profileSection}>
           {student?.faceImage && !imageError ? (
             <Image
@@ -230,57 +321,89 @@ export default function StudentDashboard() {
           ) : (
             <View style={styles.fallbackCircle}>
               <Text style={styles.fallbackText}>
-                {student?.studentName?.charAt(0).toUpperCase() || "?"}
+                {student?.studentName?.charAt(0).toUpperCase() || "S"}
               </Text>
             </View>
           )}
-          <View>
-            <Text style={styles.username}>{student?.studentName}</Text>
-            <Text style={styles.subText}>Roll No: {student?.rollNo}</Text>
+          <View style={styles.profileInfo}>
+            <View style={styles.idBadge}>
+              <Ionicons name="id-card" size={16} color="#fff" />
+              <Text style={styles.rollNo}>{student?.rollNo || "123456"}</Text>
+            </View>
+            <View style={styles.collegeBadge}>
+              <Ionicons name="school" size={14} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.college}>{student?.collegeName || "College Name"}</Text>
+            </View>
           </View>
         </View>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Ionicons name="notifications-outline" size={26} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.iconButton}
-            onPress={() => setLogoutModalVisible(true)}
-          >
-            <Ionicons name="log-out-outline" size={26} color="#fff" />
-          </TouchableOpacity>
-        </View>
+      </View>
+
+      {/* Quick Stats */}
+      <View style={styles.quickStatsContainer}>
+        <Text style={styles.sectionTitle}>Quick Start</Text>
+        <FlatList
+          data={quickActions}
+          renderItem={renderQuickAction}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickStatsList}
+        />
       </View>
 
       {/* Achievements Banner */}
       <TouchableOpacity 
         style={styles.achievementBanner}
         onPress={() => router.push("/dashboards/StudentDashboard/AchievementsScreen")}
+        activeOpacity={0.8}
       >
         <View style={styles.bannerContent}>
-          <Ionicons name="trophy" size={24} color="#FFF" />
-          <Text style={styles.bannerText}>
-            You have {achievementsCount ?? 0} Achievement{(achievementsCount ?? 0) !== 1 ? 's' : ''}
-          </Text>
+          <View style={styles.bannerIconContainer}>
+            <Ionicons name="trophy" size={24} color="#FFF" />
+          </View>
+          <View style={styles.bannerTextContainer}>
+            <Text style={styles.bannerTitle}>Your Achievements</Text>
+            <Text style={styles.bannerSubtitle}>
+              {achievementsCount ?? 0} accomplishment{(achievementsCount ?? 0) !== 1 ? 's' : ''}
+            </Text>
+          </View>
           <Ionicons name="chevron-forward" size={20} color="#FFF" />
         </View>
       </TouchableOpacity>
 
-      {/* Stats Section */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{student?.year || "-"}</Text>
-          <Text style={styles.statLabel}>Year</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{student?.roomNo || "-"}</Text>
-          <Text style={styles.statLabel}>Room No</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>{student?.blockName || "-"}</Text>
-          <Text style={styles.statLabel}>Block</Text>
-        </View>
+      {/* Menu Section Title */}
+      <View style={styles.menuTitleContainer}>
+        <Text style={styles.sectionTitle}>Campus Services</Text>
+        <Text style={styles.sectionSubtitle}>Access all campus facilities</Text>
       </View>
+    </>
+  );
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#5e72e4" />
+        <Text style={styles.loadingText}>Loading your dashboard...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#5e72e4" />
+      <FlatList
+        data={menuItems}
+        renderItem={renderMenuItem}
+        keyExtractor={(item) => item.id}
+        numColumns={3}
+        columnWrapperStyle={styles.menuGrid}
+        contentContainerStyle={[
+          styles.listContent,
+          { paddingBottom: insets.bottom + 20 }
+        ]}
+        ListHeaderComponent={renderHeader}
+        showsVerticalScrollIndicator={false}
+      />
       
       {/* Logout Confirmation Modal */}
       <Modal
@@ -290,15 +413,13 @@ export default function StudentDashboard() {
         onRequestClose={() => setLogoutModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View
-            style={[
-              styles.modalContent,
-              { paddingBottom: Math.max(20, insets.bottom) },
-            ]}
-          >
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="log-out-outline" size={40} color="#f5365c" />
+            </View>
             <Text style={styles.modalTitle}>Confirm Logout</Text>
             <Text style={styles.modalMessage}>
-              Are you sure you want to logout?
+              Are you sure you want to logout from your account?
             </Text>
             <View style={styles.modalButtons}>
               <Pressable
@@ -317,171 +438,244 @@ export default function StudentDashboard() {
           </View>
         </View>
       </Modal>
-    </>
-  );
-
-  return student ? (
-    <FlatList
-      data={menuItems}
-      renderItem={renderMenuItem}
-      keyExtractor={(item) => item.id}
-      numColumns={3}
-      columnWrapperStyle={styles.row}
-      contentContainerStyle={[
-        styles.container,
-        { paddingBottom: Math.max(20, insets.bottom + 20) } // Added safe area padding
-      ]}
-      ListHeaderComponent={renderHeader}
-    />
-  ) : (
-    <Text style={styles.loadingText}>Loading student info...</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#f5f7ff",
-    paddingHorizontal: 15,
-    paddingBottom: 20, // Base padding
+    flex: 1,
+    backgroundColor: "#f7fafc",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f7fafc",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#8392ab",
   },
   header: {
+    backgroundColor: "#5e72e4",
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomLeftRadius: 0,
+    borderBottomRightRadius: 0,
+  },
+  headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#6a4cff",
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    borderRadius: 16,
-    marginTop: 40,
+    alignItems: "flex-start",
     marginBottom: 15,
+  },
+  greeting: {
+    fontSize: 16,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginBottom: 2,
+    fontWeight: "500",
+  },
+  username: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  headerIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  iconButton: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#f5365c",
   },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
   },
-  headerIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 15,
-  },
-  iconButton: {
-    padding: 5,
-  },
   avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    marginRight: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   fallbackCircle: {
-    width: 55,
-    height: 55,
-    borderRadius: 28,
-    backgroundColor: "#007bff",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.3)",
   },
   fallbackText: {
     color: "#fff",
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
   },
-  username: {
-    fontSize: 18,
-    fontWeight: "700",
+  profileInfo: {
+    marginLeft: 15,
+    flex: 1,
+  },
+  idBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  rollNo: {
+    fontSize: 16,
+    fontWeight: "600",
     color: "#fff",
+    marginLeft: 6,
   },
-  subText: {
-    color: "#e0e0e0",
-    fontSize: 13,
+  collegeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
   },
-  achievementBanner: {
-    backgroundColor: "#FF9800",
-    borderRadius: 12,
+  college: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    marginLeft: 6,
+  },
+  quickStatsContainer: {
+    backgroundColor: "#fff",
+    marginHorizontal: 15,
+    marginTop: 15,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#2d3748",
+    marginBottom: 12,
+  },
+  quickStatsList: {
+    paddingVertical: 5,
+  },
+  quickActionCard: {
+    backgroundColor: "#f8f9fe",
+    borderRadius: 12,
+    padding: 12,
+    width: 110,
+    marginRight: 10,
+  },
+  quickActionHeader: {
+    alignItems: "center",
+  },
+  quickActionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  quickActionTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2d3748",
+    textAlign: "center",
+  },
+  achievementBanner: {
+    backgroundColor: "#ff9700",
+    marginHorizontal: 15,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 15,
   },
   bannerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  bannerText: {
-    color: "#FFF",
+  bannerIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bannerTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  bannerTitle: {
     fontSize: 16,
     fontWeight: "600",
-    flex: 1,
-    marginLeft: 10,
+    color: "#FFF",
+    marginBottom: 2,
   },
-  statsContainer: {
-    flexDirection: "row",
+  bannerSubtitle: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+  },
+  menuTitleContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#718096",
+  },
+  listContent: {
+    paddingTop: 0,
+    backgroundColor: "#f7fafc",
+  },
+  menuGrid: {
     justifyContent: "space-between",
-    backgroundColor: "#6a4cff",
-    borderRadius: 16,
-    padding: 15,
-    marginBottom: 20,
-  },
-  statCard: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 16,
-    color: "#fff",
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  statLabel: {
-    color: "#e0e0e0",
-    fontSize: 12,
-    marginTop: 4,
-    textAlign: "center",
-  },
-  row: {
-    justifyContent: "space-between",
-    marginBottom: 15,
+    paddingHorizontal: 15,
+    marginBottom: 5,
   },
   menuItem: {
     backgroundColor: "#fff",
-    flex: 1,
-    margin: 5,
+    width: (width - 60) / 3,
     borderRadius: 16,
     alignItems: "center",
-    paddingVertical: 20,
+    paddingVertical: 16,
+    marginHorizontal: 5,
+    marginBottom: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    minWidth: 100,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   iconContainer: {
-    width: 55,
-    height: 55,
-    borderRadius: 16,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 10,
   },
   menuText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
-    color: "#333",
+    color: "#2d3748",
     textAlign: "center",
-  },
-  loadingText: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-    color: "#555",
+    paddingHorizontal: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -501,17 +695,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  modalIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(245, 54, 92, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
-    color: "#2c3e50",
+    color: "#2d3748",
+    textAlign: "center",
   },
   modalMessage: {
     fontSize: 16,
     marginBottom: 20,
     textAlign: "center",
-    color: "#7f8c8d",
+    color: "#718096",
+    lineHeight: 22,
   },
   modalButtons: {
     flexDirection: "row",
@@ -526,17 +731,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   cancelButton: {
-    backgroundColor: "#f1f2f6",
+    backgroundColor: "#f7fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   logoutButtonModal: {
-    backgroundColor: "#FF3B30",
+    backgroundColor: "#f5365c",
   },
   cancelButtonText: {
-    color: "#2c3e50",
-    fontWeight: "bold",
+    color: "#4a5568",
+    fontWeight: "600",
   },
   logoutButtonTextModal: {
     color: "white",
-    fontWeight: "bold",
+    fontWeight: "600",
   },
 });

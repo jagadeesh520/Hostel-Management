@@ -1,23 +1,18 @@
+// TimesheetScreen.tsx  — replace your existing file with this
 import { API_BASE_URL } from "@/constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
 import { useEffect, useState } from "react";
 import {
   Linking,
-  Modal,
-  Pressable,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Calendar } from "react-native-calendars";
-import { WebView } from "react-native-webview";
-
-//const API_BASE = "https://api.sjtechsol.com";
 
 type MarkedDateProps = {
   customStyles: {
@@ -28,7 +23,6 @@ type MarkedDateProps = {
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-// Normalize to YYYY-MM-DD regardless of 2025-7-1, 01/07/2025, ISO, etc.
 const normalizeDate = (input: string) => {
   if (!input) return input as any;
   const m = String(input).match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
@@ -41,7 +35,6 @@ const normalizeDate = (input: string) => {
   return String(input);
 };
 
-// extract date arrays from many shapes
 const coerceDateStrings = (val: any, wantStatus?: string): string[] => {
   if (!val) return [];
   if (Array.isArray(val) && val.every((x) => typeof x === "string")) {
@@ -76,7 +69,6 @@ const coerceDateStrings = (val: any, wantStatus?: string): string[] => {
   return [];
 };
 
-// Extended rate extractor: reads veg/nonveg + estCharges; falls back to boysRate/girlsRate
 const extractExtendedRates = (raw: any) => {
   const base =
     raw?.rate ?? raw?.data ?? (Array.isArray(raw) ? raw[0] : raw) ?? raw ?? {};
@@ -85,7 +77,6 @@ const extractExtendedRates = (raw: any) => {
   const girlsVegRate = Number(base.girlsVegRate ?? 0);
   const girlsNonVegRate = Number(base.girlsNonVegRate ?? 0);
 
-  // Backward-compat fallback: if only boysRate/girlsRate exist, map them as Veg
   const _boysRate = Number(base.boysRate ?? 0);
   const _girlsRate = Number(base.girlsRate ?? 0);
 
@@ -110,19 +101,16 @@ const isMaleGender = (g: string | null) => {
   );
 };
 
-// Robust diet normalizer
 const normDiet = (t: string | null): "veg" | "non-veg" => {
   const s = (t || "").trim().toLowerCase();
-  // matches: "non-veg", "non veg", "nonveg", "nv", "non"
   if (/^nv$/.test(s)) return "non-veg";
   if (/(^|[^a-z])non($|[^a-z])/.test(s)) return "non-veg";
   if (/non[\s-]?veg/.test(s)) return "non-veg";
   return "veg";
 };
 
-// Robust year → y1..y4
 const pickYearKey = (yearText: string | null) => {
-  const digit = (yearText || "").replace(/\D/g, ""); // keep only digits
+  const digit = (yearText || "").replace(/\D/g, "");
   if (digit === "1") return "y1";
   if (digit === "2") return "y2";
   if (digit === "3") return "y3";
@@ -132,10 +120,8 @@ const pickYearKey = (yearText: string | null) => {
 type PayKind = "mess" | "establishment";
 
 const TimesheetScreen = () => {
-  const [markedDates, setMarkedDates] = useState<
-    Record<string, MarkedDateProps>
-  >({});
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1); // 1-12
+  const [markedDates, setMarkedDates] = useState<Record<string, MarkedDateProps>>({});
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const [presentDays, setPresentDays] = useState(0);
@@ -143,72 +129,32 @@ const TimesheetScreen = () => {
   const [messAmount, setMessAmount] = useState(0);
   const [establishmentAmount, setEstablishmentAmount] = useState(0);
 
-  // separate toggles if you want different availability windows later
-  const [canPayMess, setCanPayMess] = useState(false);
-  const [canPayEst, setCanPayEst] = useState(false);
-
-  // student info
   const [studentGender, setStudentGender] = useState<string | null>(null);
-  const [studentDiet, setStudentDiet] = useState<string | null>(null); // "veg" | "non-veg"
-  const [studentYear, setStudentYear] = useState<string | null>(null); // "1st Year" etc
+  const [studentDiet, setStudentDiet] = useState<string | null>(null);
+  const [studentYear, setStudentYear] = useState<string | null>(null);
   const [rollNo, setRollNo] = useState<string | null>(null);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [payKind, setPayKind] = useState<PayKind>("mess");
-
-  // debug
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  // legacy per-endpoint values (fallback)
   const [messOverdue, setMessOverdue] = useState(0);
   const [estOverdue, setEstOverdue] = useState(0);
-  const [payAmount, setPayAmount] = useState("");
-  const [webviewHtml, setWebviewHtml] = useState<string | null>(null);
 
-  console.log("messOverdue", messOverdue, estOverdue);
+  // authoritative StudentDue picked from /api/dues/:rollNo
+  const [studentDue, setStudentDue] = useState<{ messDue: number; estDue: number; totalDue: number } | null>(null);
 
-  useEffect(() => {
-    if (!rollNo) return;
-    (async () => {
-      try {
-        const messRes = await axios.get(
-          `${API_BASE_URL}/api/mess/dues/${rollNo}`
-        );
-        console.log("messRes.data", messRes.data);
-        setMessOverdue(messRes.data?.overdue || 0); // FIXED
-        // keep for UI
-        setDebugInfo((prev: any) => ({
-          ...prev,
-          messPaid: messRes.data?.paid || 0,
-        }));
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
-        const estRes = await axios.get(
-          `${API_BASE_URL}/api/establishment/dues/${rollNo}`
-        );
-        console.log("estRes", estRes.data);
-        setEstOverdue(estRes.data?.overdue || 0); // FIXED
-        setDebugInfo((prev: any) => ({
-          ...prev,
-          estPaid: estRes.data?.paid || 0,
-        }));
-      } catch (err) {
-        console.error("Overdue fetch failed", err);
-      }
-    })();
-  }, [rollNo]);
-
-  // Load identity basics
   useEffect(() => {
     (async () => {
       const r = await AsyncStorage.getItem("rollNo");
       const g = await AsyncStorage.getItem("gender");
-      const t = await AsyncStorage.getItem("type"); // "veg" | "non-veg" | "NV" etc.
-      const y = await AsyncStorage.getItem("year"); // "1st Year", etc.
+      const t = await AsyncStorage.getItem("type");
+      const y = await AsyncStorage.getItem("year");
 
       setRollNo(r);
       if (g) setStudentGender(g);
       if (t) setStudentDiet(normDiet(t));
       if (y) setStudentYear(y);
 
-      // if diet/year/gender missing, try to fetch from backend student profile
       if (r && (!t || !y || !g)) {
         try {
           const resp = await axios.get(`${API_BASE_URL}/api/students/${r}`);
@@ -223,29 +169,32 @@ const TimesheetScreen = () => {
     })();
   }, []);
 
-  // Compute bills once we know month/year + student attributes
+  // fetch timesheet/rates + dues (keeps most of your previous logic)
   useEffect(() => {
     if (!rollNo) return;
-    if (!studentGender || !studentYear || !studentDiet) return; // wait until all are ready
-
-    fetchTimesheetAndRates(
-      selectedMonth,
-      selectedYear,
-      studentGender,
-      studentDiet,
-      studentYear
-    );
+    if (!studentGender || !studentYear || !studentDiet) return;
+    fetchTimesheetAndRates(selectedMonth, selectedYear, studentGender, studentDiet, studentYear);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    selectedMonth,
-    selectedYear,
-    rollNo,
-    studentGender,
-    studentDiet,
-    studentYear,
-  ]);
+  }, [selectedMonth, selectedYear, rollNo, studentGender, studentDiet, studentYear]);
 
-  // month: 1..12 (human), JS Date month is 0..11
+  const fetchRatesData = async (month: number, year: number) => {
+    const tryUrls = [
+      `${API_BASE_URL}/api/adminRates/rate?month=${month}&year=${year}`,
+      `${API_BASE_URL}/api/adminRates/rate?month=${String(month).padStart(2, "0")}&year=${year}`,
+    ];
+    for (const url of tryUrls) {
+      try {
+        const resp = await axios.get(url);
+        return resp.data;
+      } catch (e: any) {
+        if (e?.response?.status !== 404) {
+          console.error("Rate fetch error", url, e?.message);
+        }
+      }
+    }
+    return null;
+  };
+
   const fetchTimesheetAndRates = async (
     month: number,
     year: number,
@@ -254,7 +203,6 @@ const TimesheetScreen = () => {
     yearTextArg: string | null
   ) => {
     try {
-      // Reset states
       setMessRatePerDay(0);
       setMessAmount(0);
       setPresentDays(0);
@@ -262,16 +210,15 @@ const TimesheetScreen = () => {
       setEstablishmentAmount(0);
       setMessOverdue(0);
       setEstOverdue(0);
+      setStudentDue(null);
 
       if (!rollNo) return;
 
       const daysInMonth = new Date(year, month, 0).getDate();
       const monthPrefix = `${year}-${pad2(month)}`;
 
-      // ---- attendance ----
-      const timesheetRes = await axios.get(
-        `${API_BASE_URL}/api/timesheetRoutes/${rollNo}`
-      );
+      // timesheet (single fetch)
+      const timesheetRes = await axios.get(`${API_BASE_URL}/api/timesheetRoutes/${rollNo}`);
       const tData = timesheetRes.data || {};
 
       const present = coerceDateStrings(tData.presentDates);
@@ -283,88 +230,41 @@ const TimesheetScreen = () => {
       const fApproved = approved.filter((d) => d && d.startsWith(monthPrefix));
 
       const style = {
-        present: {
-          container: { backgroundColor: "#00c853", borderRadius: 100 },
-          text: { color: "white", fontWeight: "bold" },
-        },
-        absent: {
-          container: { backgroundColor: "#d32f2f", borderRadius: 100 },
-          text: { color: "white", fontWeight: "bold" },
-        },
-        leave: {
-          container: { backgroundColor: "#ff9800", borderRadius: 100 },
-          text: { color: "white", fontWeight: "bold" },
-        },
-        empty: {
-          container: {
-            backgroundColor: "#ccc",
-            opacity: 0.5,
-            borderRadius: 100,
-          },
-          text: { color: "#888" },
-        },
+        present: { container: { backgroundColor: "#00c853", borderRadius: 100 }, text: { color: "white", fontWeight: "bold" } },
+        absent: { container: { backgroundColor: "#d32f2f", borderRadius: 100 }, text: { color: "white", fontWeight: "bold" } },
+        leave: { container: { backgroundColor: "#ff9800", borderRadius: 100 }, text: { color: "white", fontWeight: "bold" } },
+        empty: { container: { backgroundColor: "#ccc", opacity: 0.5, borderRadius: 100 }, text: { color: "#888" } },
       } as const;
 
       const marked: Record<string, MarkedDateProps> = {};
       for (let d = 1; d <= daysInMonth; d++) {
         const dateStr = `${year}-${pad2(month)}-${pad2(d)}`;
-        if (fPresent.includes(dateStr))
-          marked[dateStr] = { customStyles: style.present };
-        else if (fApproved.includes(dateStr))
-          marked[dateStr] = { customStyles: style.leave };
-        else if (fAbsent.includes(dateStr))
-          marked[dateStr] = { customStyles: style.absent };
+        if (fPresent.includes(dateStr)) marked[dateStr] = { customStyles: style.present };
+        else if (fApproved.includes(dateStr)) marked[dateStr] = { customStyles: style.leave };
+        else if (fAbsent.includes(dateStr)) marked[dateStr] = { customStyles: style.absent };
         else marked[dateStr] = { customStyles: style.empty };
       }
       setMarkedDates(marked);
 
-      // ---- rates ----
-      let ratesData: any = null;
-      const tryUrls = [
-        `${API_BASE_URL}/api/adminRates/rate?month=${month}&year=${year}`,
-        `${API_BASE_URL}/api/adminRates/rate?month=${String(month).padStart(
-          2,
-          "0"
-        )}&year=${year}`,
-      ];
-      for (const url of tryUrls) {
-        try {
-          const resp = await axios.get(url);
-          ratesData = resp.data;
-          break;
-        } catch (e: any) {
-          if (e?.response?.status !== 404) {
-            console.error("Rate fetch error", url, e?.message);
-          }
-        }
-      }
-
+      // rates for selected month
+      const ratesData = await fetchRatesData(month, year);
       const rates = extractExtendedRates(ratesData || {});
-      const gender = genderArg;
-      const diet = normDiet(dietArg);
-      const isMale = isMaleGender(gender);
-
+      const isMale = isMaleGender(genderArg);
       let perDay = 0;
-      if (isMale) {
-        perDay = diet === "non-veg" ? rates.boysNonVegRate : rates.boysVegRate;
-      } else {
-        perDay =
-          diet === "non-veg" ? rates.girlsNonVegRate : rates.girlsVegRate;
-      }
+      if (isMale) perDay = dietArg === "non-veg" ? rates.boysNonVegRate : rates.boysVegRate;
+      else perDay = dietArg === "non-veg" ? rates.girlsNonVegRate : rates.girlsVegRate;
 
       const presentDaysCount = fPresent.length;
       const mess = presentDaysCount * (perDay || 0);
-
       const yrKey = pickYearKey(yearTextArg);
       const estAmount = Number(rates.estCharges?.[yrKey] ?? 0);
 
-      // Save current month info (just display)
       setPresentDays(presentDaysCount);
       setMessRatePerDay(perDay || 0);
       setMessAmount(mess);
       setEstablishmentAmount(estAmount);
 
-      // ---- fetch dues from backend (truth source) ----
+      // legacy endpoints for fallback
       const [messRes, estRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/mess/dues/${rollNo}`),
         axios.get(`${API_BASE_URL}/api/establishment/dues/${rollNo}`),
@@ -375,27 +275,33 @@ const TimesheetScreen = () => {
       const backendEstOverdue = estRes.data?.overdue || 0;
       const backendEstPaid = estRes.data?.paid || 0;
 
-      // ✅ Use backend directly, don’t add bills again
+      // Try to fetch StudentDue master doc (preferred)
+      try {
+        const sdResp = await axios.get(`${API_BASE_URL}/api/dues/${rollNo}`);
+        const sdPayload = sdResp.data && sdResp.data.data ? sdResp.data.data : sdResp.data;
+        const sd = sdPayload ?? null;
+        if (sd && typeof sd === "object") {
+          const maybe = {
+            messDue: Number(sd.messDue ?? sd.overdue ?? backendMessOverdue ?? 0),
+            estDue: Number(sd.estDue ?? sd.estoverdue ?? backendEstOverdue ?? 0),
+            totalDue: Number(sd.totalDue ?? ((sd.messDue ?? backendMessOverdue) + (sd.estDue ?? backendEstOverdue)) ?? 0),
+          };
+          setStudentDue(maybe);
+        } else {
+          setStudentDue(null);
+        }
+      } catch (e) {
+        setStudentDue(null);
+      }
+
       setMessOverdue(backendMessOverdue);
       setEstOverdue(backendEstOverdue);
-
-      // Enable pay buttons only for current month
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-
-      setCanPayMess(
-        year === currentYear && month === currentMonth && backendMessOverdue > 0
-      );
-      setCanPayEst(
-        year === currentYear && month === currentMonth && backendEstOverdue > 0
-      );
 
       setDebugInfo({
         month,
         year,
-        gender,
-        diet,
+        gender: genderArg,
+        diet: dietArg,
         studentYear: yearTextArg,
         perDay,
         presentDaysCount,
@@ -414,514 +320,131 @@ const TimesheetScreen = () => {
       setEstablishmentAmount(0);
       setMessOverdue(0);
       setEstOverdue(0);
+      setStudentDue(null);
     }
   };
 
-  // generic UPI opener + record
-  const pay = async (kind: PayKind) => {
+  // Simple Pay Overdue handler - opens SBI Collect page.
+  const handlePayOverdue = async () => {
     try {
-      if (!rollNo) return;
-
-      // fetch admin UPI
-      const upiRes = await axios.get(
-        `${API_BASE_URL}/api/timesheetRoutes/admin-upi`
-      );
-      const { upiId, name } = upiRes.data || {};
-      if (!upiId || !name) {
-        alert("UPI details not available. Please contact admin.");
+      const sbiUrl = "https://www.onlinesbi.sbi/sbicollect/";
+      const can = await Linking.canOpenURL(sbiUrl);
+      if (!can) {
+        alert("Cannot open SBI Collect on this device.");
         return;
       }
-
-      const amount = kind === "mess" ? messOverdue : estOverdue;
-
-      if (!amount || amount <= 0) {
-        alert("Amount is zero or invalid.");
-        return;
-      }
-
-      const txnNote = `${
-        kind === "mess" ? "Mess" : "Establishment"
-      } for ${selectedMonth}-${selectedYear}`;
-      const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(
-        name
-      )}&tn=${encodeURIComponent(txnNote)}&am=${amount}&cu=INR`;
-
-      const supported = await Linking.canOpenURL(upiUrl);
-      if (!supported) {
-        alert("No UPI-compatible app found on your device.");
-        return;
-      }
-
-      await Linking.openURL(upiUrl);
-
-      // record payment
-      const payload: any = {
-        rollNo,
-        month: selectedMonth,
-        year: selectedYear,
-        amount,
-        feeType: kind, // "mess" | "establishment"
-        paymentMethod: "UPI",
-      };
-      if (kind === "mess") {
-        payload.days = presentDays;
-        payload.perDayRate = messRatePerDay;
-        payload.diet = normDiet(studentDiet);
-        payload.gender = studentGender;
-      } else {
-        payload.yearKey = pickYearKey(studentYear);
-      }
-
-      const res = await axios.post(
-        `${API_BASE_URL}/api/timesheetRoutes/payment`,
-        payload
-      );
-      if (res.data?.success) {
-        alert(
-          `${
-            kind === "mess" ? "Mess" : "Establishment"
-          } payment recorded successfully!`
-        );
-      } else {
-        alert("Payment failed to record.");
-      }
-
-      setModalVisible(false);
+      await Linking.openURL(sbiUrl);
     } catch (err) {
-      console.error("UPI Payment error:", err);
-      alert("Payment failed. Try again.");
-      setModalVisible(false);
+      console.error("Failed to open SBI URL:", err);
+      alert("Unable to open payment page. Please try from a browser.");
     }
-  };
-
-  const openPayModal = (kind: PayKind) => {
-    setPayKind(kind);
-    setModalVisible(true);
   };
 
   const ready = Boolean(rollNo && studentGender && studentYear && studentDiet);
 
+  // =========================
+  // Display dues directly from DB (no extra previous-month additions)
+  // =========================
+  const baseMess = typeof studentDue?.messDue === "number" ? studentDue.messDue : messOverdue ?? 0;
+  const baseEst = typeof studentDue?.estDue === "number" ? studentDue.estDue : estOverdue ?? 0;
+  const baseTotalFromStudentDue = typeof studentDue?.totalDue === "number" ? studentDue.totalDue : null;
+
+  const displayedMess = baseMess;
+  const displayedEst = baseEst;
+  const displayedTotal =
+    baseTotalFromStudentDue !== null
+      ? baseTotalFromStudentDue
+      : displayedMess + displayedEst;
+  // =========================
+
   return (
     <SafeAreaView style={styles.container}>
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-around",
-          marginTop: 8,
-        }}
-      >
-        {[
-          { label: "Present", bg: "#00c853" },
-          { label: "Absent", bg: "#d32f2f" },
-          { label: "Approved Leave", bg: "#ff9800" },
-        ].map((it) => (
-          <View
-            key={it.label}
-            style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-          >
-            <View
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: it.bg,
-              }}
-            />
+      <View style={{ flexDirection: "row", justifyContent: "space-around", marginTop: 8 }}>
+        {[{ label: "Present", bg: "#00c853" }, { label: "Absent", bg: "#d32f2f" }, { label: "Approved Leave", bg: "#ff9800" }].map((it) => (
+          <View key={it.label} style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: it.bg }} />
             <Text>{it.label}</Text>
           </View>
         ))}
       </View>
+
       <Text style={styles.title}>Timesheet Calendar</Text>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollBody}
-        keyboardShouldPersistTaps="handled"
-        nestedScrollEnabled
-      >
+      <ScrollView contentContainerStyle={styles.scrollBody} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
         <Calendar
           enableSwipeMonths
           hideExtraDays
           markingType="custom"
           markedDates={markedDates}
           theme={{ todayTextColor: "#00C853", arrowColor: "#00C853" }}
-          onMonthChange={(month) => {
-            setSelectedMonth(month.month); // 1-12
-            setSelectedYear(month.year);
-          }}
+          onMonthChange={(month) => { setSelectedMonth(month.month); setSelectedYear(month.year); }}
         />
 
         <View style={styles.summary}>
-          <Text style={styles.summaryTitle}>
-            Current Period: {pad2(selectedMonth)}/{selectedYear}
-          </Text>
+          <Text style={styles.summaryTitle}>Current Period: {pad2(selectedMonth)}/{selectedYear}</Text>
 
-          {!ready && (
-            <Text style={{ color: "#444", marginBottom: 8 }}>
-              Loading student details…
-            </Text>
-          )}
+          {!ready && (<Text style={{ color: "#444", marginBottom: 8 }}>Loading student details…</Text>)}
 
+          <View style={styles.summaryRow}><Text>Days Present</Text><Text>{presentDays} days</Text></View>
           <View style={styles.summaryRow}>
-            <Text>Days Present</Text>
-            <Text>{presentDays} days</Text>
-          </View>
-
-          <View style={styles.summaryRow}>
-            <Text>
-              Per Day Mess Rate (
-              {(normDiet(studentDiet || "") || "").toUpperCase()} •{" "}
-              {String(studentGender || "").toUpperCase()})
-            </Text>
+            <Text>Per Day Mess Rate ({(normDiet(studentDiet || "") || "").toUpperCase()} • {String(studentGender || "").toUpperCase()})</Text>
             <Text>₹{messRatePerDay}</Text>
           </View>
 
-          {/* Show current month bill separately (just info) */}
           <View style={styles.infoBox}>
-            <Text style={styles.infoText}>
-              Current Mess Bill: ₹{messAmount}
-            </Text>
-            <Text style={styles.infoText}>
-              Current Establishment Charges: ₹{establishmentAmount}
-            </Text>
+            <Text style={styles.infoText}>Current Mess Bill: ₹{messAmount}</Text>
+            <Text style={styles.infoText}>Current Establishment Charges: ₹{establishmentAmount}</Text>
           </View>
 
-          {/* Mess Overdue Box */}
-          <View style={[styles.card, { borderColor: "#00C853" }]}>
-            <Text style={styles.cardTitle}>Mess Overdue</Text>
+          {/* Single Overdue card (Mess/Est/Total) */}
+          <View style={[styles.card, { borderColor: "#e53935" }]}>
+            <Text style={styles.cardTitle}>Overdue</Text>
 
             <View style={styles.summaryRow}>
-              <Text>Overdue Amount</Text>
-              <Text style={{ color: messOverdue > 0 ? "red" : "green" }}>
-                ₹{messOverdue}
-              </Text>
+              <Text>Mess Due</Text>
+              <Text style={{ color: displayedMess > 0 ? "red" : "green" }}>₹{displayedMess}</Text>
             </View>
 
             <View style={styles.summaryRow}>
-              <Text>Already Paid</Text>
-              <Text style={{ color: "green" }}>
-                ₹{debugInfo?.messPaid || 0}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.payButton,
-                { backgroundColor: messOverdue > 0 ? "#00C853" : "#ccc" },
-              ]}
-              disabled={messOverdue <= 0}
-              onPress={() => openPayModal("mess")}
-            >
-              <Text style={styles.payButtonText}>
-                {messOverdue > 0 ? "Pay Overdue" : "No Overdue"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Establishment Overdue Box */}
-          <View style={[styles.card, { borderColor: "#2196f3" }]}>
-            <Text style={styles.cardTitle}>Establishment Overdue</Text>
-
-            <View style={styles.summaryRow}>
-              <Text>Overdue Amount</Text>
-              <Text style={{ color: estOverdue > 0 ? "red" : "green" }}>
-                ₹{estOverdue}
-              </Text>
+              <Text>Establishment Due</Text>
+              <Text style={{ color: displayedEst > 0 ? "red" : "green" }}>₹{displayedEst}</Text>
             </View>
 
             <View style={styles.summaryRow}>
-              <Text>Already Paid</Text>
-              <Text style={{ color: "green" }}>₹{debugInfo?.estPaid || 0}</Text>
+              <Text style={{ fontWeight: "bold" }}>Total Due</Text>
+              <Text style={{ fontWeight: "bold", color: displayedTotal > 0 ? "red" : "green" }}>₹{displayedTotal}</Text>
             </View>
 
-            <TouchableOpacity
-              style={[
-                styles.payButton,
-                { backgroundColor: estOverdue > 0 ? "#2196f3" : "#ccc" },
-              ]}
-              disabled={estOverdue <= 0}
-              onPress={() => openPayModal("establishment")}
-            >
-              <Text style={styles.payButtonText}>
-                {estOverdue > 0 ? "Pay Overdue" : "No Overdue"}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ marginTop: 12 }}>
+              <TouchableOpacity
+                style={[styles.payButton, { backgroundColor: displayedTotal > 0 ? "#1976d2" : "#ccc" }]}
+                disabled={displayedTotal <= 0}
+                onPress={handlePayOverdue}
+              >
+                <Text style={styles.payButtonText}>{displayedTotal > 0 ? "Pay Overdue (SBI Collect)" : "No Overdue"}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>
-      <Modal
-        visible={modalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalBox}>
-            {webviewHtml ? (
-              // Show BillDesk inside WebView
-              <WebView
-                originWhitelist={["*"]}
-                source={{ html: webviewHtml }}
-                javaScriptEnabled
-                domStorageEnabled
-                startInLoadingState
-                onNavigationStateChange={async (event) => {
-                  // replace this:
-                  // if (event.url.includes("sjtechsol.com/payment/response")) { ... }
-
-                  // with this generic check for the RU path you configured on the server:
-                  if (
-                    event.url.includes("/payment/response") ||
-                    event.url.includes("/payment/response?")
-                  ) {
-                    setWebviewHtml(null);
-                    setModalVisible(false);
-
-                    // Refresh dues after payment
-                    try {
-                      const messRes = await axios.get(
-                        `${API_BASE_URL}/api/mess/dues/${rollNo}`
-                      );
-                      setMessOverdue(messRes.data?.overdue || 0);
-                      const estRes = await axios.get(
-                        `${API_BASE_URL}/api/establishment/dues/${rollNo}`
-                      );
-                      setEstOverdue(estRes.data?.overdue || 0);
-                    } catch (err) {
-                      console.error("Failed to refresh dues", err);
-                    }
-                  }
-                }}
-              />
-            ) : (
-              <>
-                <Text style={styles.modalTitle}>
-                  {payKind === "mess" ? "Mess Bill" : "Establishment"} Payment
-                </Text>
-
-                <Text style={{ marginBottom: 6 }}>
-                  Total Overdue: ₹
-                  {payKind === "mess" ? messOverdue : estOverdue}
-                </Text>
-
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter amount to pay"
-                  keyboardType="numeric"
-                  value={payAmount}
-                  onChangeText={setPayAmount}
-                />
-
-                <View style={styles.modalButtons}>
-                  <Pressable
-                    onPress={async () => {
-                      try {
-                        if (!payAmount || Number(payAmount) <= 0) {
-                          alert("Enter valid amount");
-                          return;
-                        }
-
-                        const res = await axios.post(
-                          `${API_BASE_URL}/api/payment/initiate`,
-                          {
-                            rollNo,
-                            feeType: payKind,
-                            amount: Number(payAmount),
-                          }
-                        );
-
-                        const { bdorderid, merchantid, rdata } = res.data || {};
-                        if (bdorderid && rdata) {
-                          // defensive escaping for single quotes to avoid breaking the HTML string
-                          const esc = (s: any) =>
-                            String(s ?? "")
-                              .replace(/&/g, "&amp;")
-                              .replace(/'/g, "&#39;")
-                              .replace(/"/g, "&quot;");
-
-                          const htmlForm = `
-                        <html>
-                          <body>
-                            <form id="payForm" action="https://uat1.billdesk.com/u2/web/v1_2/embeddedsdk" method="POST">
-                              <input type="hidden" name="bdorderid" value='${esc(bdorderid)}' />
-                              <input type="hidden" name="merchantid" value='${esc(
-                                merchantid || ""
-                              )}' />
-                              <input type="hidden" name="rdata" value='${esc(rdata)}' />
-                            </form>
-                            <script>
-                              // avoid timing issues — give the page a tick then submit
-                              setTimeout(function(){ document.getElementById('payForm').submit(); }, 50);
-                            </script>
-                          </body>
-                        </html>
-                      `;
-                          setWebviewHtml(htmlForm);
-                        } else {
-                          alert(
-                            "Payment initiation failed (missing bdorderid/rdata)."
-                          );
-                        }
-                      } catch (err: unknown) {
-                        // Log raw error
-                        console.error("Payment error full (raw):", err);
-
-                        // Narrow the error
-                        let serverMsg: any = "Payment failed";
-                        if (axios.isAxiosError(err)) {
-                          // Axios error: show response data if present, otherwise message
-                          console.error("Payment axios error object:", {
-                            isAxiosError: true,
-                            message: err.message,
-                            code: err.code,
-                            responseData: err.response?.data,
-                            status: err.response?.status,
-                          });
-                          serverMsg = err.response?.data ?? err.message;
-                        } else if (
-                          err &&
-                          typeof err === "object" &&
-                          "message" in err
-                        ) {
-                          // Generic Error-like object
-                          serverMsg = (err as any).message;
-                        } else {
-                          serverMsg = String(err);
-                        }
-
-                        // Alert user (stringify objects so alert shows something readable)
-                        alert(
-                          "Payment failed: " +
-                            (typeof serverMsg === "object"
-                              ? JSON.stringify(serverMsg)
-                              : serverMsg)
-                        );
-                      }
-                    }}
-                    style={styles.modalPayButton}
-                  >
-                    <Text style={{ color: "#fff" }}>Pay via BillDesk</Text>
-                  </Pressable>
-
-                  <Pressable
-                    onPress={() => setModalVisible(false)}
-                    style={styles.modalCancelButton}
-                  >
-                    <Text style={{ color: "#333" }}>Cancel</Text>
-                  </Pressable>
-                </View>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#f2f9ff", padding: 6 },
-  scrollBody: {
-    flexGrow: 1,
-    paddingBottom: 80, // ensures you can scroll past the last card
-  },
-  title: {
-    fontSize: 20,
-    textAlign: "center",
-    color: "#fff",
-    backgroundColor: "#2196f3",
-    paddingVertical: 10,
-    fontWeight: "bold",
-  },
-  summary: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-    gap: 10,
-  },
+  scrollBody: { flexGrow: 1, paddingBottom: 80 },
+  title: { fontSize: 20, textAlign: "center", color: "#fff", backgroundColor: "#2196f3", paddingVertical: 10, fontWeight: "bold" },
+  summary: { marginTop: 16, padding: 12, backgroundColor: "#fff", borderTopWidth: 1, borderTopColor: "#ddd", gap: 10 },
   summaryTitle: { fontWeight: "bold", fontSize: 16, marginBottom: 6 },
-  summaryRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  card: {
-    marginTop: 12,
-    borderWidth: 1.5,
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
-  },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+  card: { marginTop: 12, borderWidth: 1.5, borderRadius: 10, padding: 12, marginBottom: 8 },
   cardTitle: { fontWeight: "bold", marginBottom: 8 },
   amount: { fontWeight: "bold", color: "#00C853" },
-  payButton: {
-    marginTop: 10,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
+  payButton: { marginTop: 10, paddingVertical: 12, borderRadius: 8, alignItems: "center" },
   payButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalBox: {
-    width: "80%",
-    backgroundColor: "#fff",
-    padding: 25,
-    borderRadius: 10,
-    elevation: 5,
-    alignItems: "center",
-  },
-  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 10 },
-  modalButtons: { flexDirection: "row", marginTop: 20, gap: 12 },
-  modalPayButton: {
-    backgroundColor: "#00C853",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  modalCancelButton: {
-    backgroundColor: "#ddd",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  debugBox: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#f3f3f3",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e1e1e1",
-    gap: 4,
-  },
-  debugTitle: { fontWeight: "bold", marginBottom: 4 },
-  infoBox: {
-    marginTop: 10,
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  infoText: {
-    fontSize: 14,
-    color: "#333",
-    marginBottom: 4,
-  },
-  input: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    padding: 10,
-    marginVertical: 8,
-  },
+  infoBox: { marginTop: 10, marginBottom: 10, padding: 10, backgroundColor: "#f5f5f5", borderRadius: 8, borderWidth: 1, borderColor: "#ddd" },
+  infoText: { fontSize: 14, color: "#333", marginBottom: 4 },
 });
 
 export default TimesheetScreen;
