@@ -13,6 +13,13 @@ buildscript {
     }
 }
 
+ext {
+    compileSdkVersion = 36
+    targetSdkVersion  = 36
+    minSdkVersion     = 24   // 👈 must be 24+ for Hermes/VisionCamera
+    buildToolsVersion = "36.0.0"
+}
+
 // Optional: reference to RN Android dir
 def reactNativeAndroidDir = new File(
     providers.exec {

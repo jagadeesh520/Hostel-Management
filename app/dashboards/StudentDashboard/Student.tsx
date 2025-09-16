@@ -458,18 +458,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#8392ab",
   },
-  header: {
+   header: {
     backgroundColor: "#5e72e4",
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    // include more bottom padding to fit name + avatar comfortably:
+    paddingBottom: 22,        // increase as needed
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
   headerTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 15,
+    alignItems: "center",     // <-- center vertically so icons align with text/avatar
+    marginBottom: 12,         // slightly smaller gap so icons don't float out
   },
   greeting: {
     fontSize: 16,
@@ -481,29 +482,36 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
     color: "#fff",
+    maxWidth: width * 0.62,    // constrain so icons always have space
+    flexShrink: 1,
   },
   headerIcons: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    // gap isn't supported reliably — use margin on children instead
   },
   iconButton: {
     padding: 8,
     borderRadius: 12,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    marginLeft: 10,           // spacing between icons
+    position: "relative",     // <-- needed so the badge is positioned relative to button
   },
-  notificationBadge: {
+ notificationBadge: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 4,                   // tweak so badge sits inside the icon container
+    right: 4,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: "#f5365c",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)", // optional: white border to make badge visible
   },
   profileSection: {
     flexDirection: "row",
     alignItems: "center",
+    marginTop: 10,            // give some breathing room below top-row
   },
   avatar: {
     width: 60,

@@ -81,11 +81,18 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
-android {
-    ndkVersion rootProject.ext.ndkVersion
+// ------------------------------------------------------------------
+// NOTE:
+// This file uses explicit compileSdk/targetSdk/minSdk/buildTools/ndk values.
+// If you prefer centralized values, add an `ext { ... }` block to top-level android/build.gradle
+// and replace these explicit values with rootProject.ext.* references.
+// ------------------------------------------------------------------
 
-    buildToolsVersion rootProject.ext.buildToolsVersion
-    compileSdk rootProject.ext.compileSdkVersion
+android {
+    // Provide fallback defaults here to avoid missing `rootProject.ext.*` during builds.
+    //ndkVersion "21.4.7075529"
+    buildToolsVersion "36.0.0"
+    compileSdk 36
 
     namespace 'com.anonymous.hostelapp'
     lint {
@@ -95,8 +102,8 @@ android {
     }
     defaultConfig {
         applicationId 'com.anonymous.hostelapp'
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdkVersion 24
+        targetSdkVersion 36
         versionCode 1
         versionName "1.0.0"
     }
@@ -166,6 +173,7 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+    implementation 'com.google.android.material:material:1.8.0'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
