@@ -6,15 +6,20 @@ import {
   FlatList,
   Linking,
   SafeAreaView,
+  StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from "react-native";
 import * as XLSX from "xlsx";
 
 export default function StudentUploadScreen() {
   const [students, setStudents] = useState<any[]>([]);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const styles = createStyles(isDark);
 
   const handlePickFile = async () => {
     try {
@@ -58,17 +63,14 @@ export default function StudentUploadScreen() {
         return;
       }
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/students/upload`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ students }),
-        }
-      );
+      const response = await fetch(`${API_BASE_URL}/api/students/upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ students }),
+      });
 
       const data = await response.json();
       console.log("data", data);
@@ -129,9 +131,7 @@ export default function StudentUploadScreen() {
       <TouchableOpacity
         style={styles.sampleButton}
         onPress={() =>
-          Linking.openURL(
-            "https://yourdomain.com/sample-student-upload.xlsx"
-          )
+          Linking.openURL("https://yourdomain.com/sample-student-upload.xlsx")
         }
       >
         <Text style={styles.sampleText}>⬇ Download Sample Template</Text>
@@ -141,12 +141,19 @@ export default function StudentUploadScreen() {
         <Text style={styles.buttonText}>📁 Select Excel File</Text>
       </TouchableOpacity>
 
-      {students.length > 0 && <Text style={styles.previewTitle}>👀 Preview Data:</Text>}
+      {students.length > 0 && (
+        <Text style={styles.previewTitle}>👀 Preview Data:</Text>
+      )}
     </>
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#ffffff" }}>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={isDark ? "#000" : "#fff"}
+      />
+
       <FlatList
         data={students}
         keyExtractor={(item, index) => item["Roll No"] || index.toString()}
@@ -172,90 +179,102 @@ export default function StudentUploadScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#ffffff",
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 12,
-  },
-  table: {
-    marginRight: 16,
-  },
-  tableHeader: {
-    fontWeight: "bold",
-    fontSize: 16,
-    backgroundColor: "#e0e0e0",
-    padding: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    textAlign: "center",
-  },
-  tableCell: {
-    padding: 8,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    textAlign: "center",
-  },
-  sampleButton: {
-    backgroundColor: "#007bff",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  sampleText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  button: {
-    backgroundColor: "#28a745",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-  studentItem: {
-    backgroundColor: "#f8f9fa",
-    padding: 10,
-    marginBottom: 5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  studentText: {
-    fontSize: 14,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    paddingBottom: 40,
-    width: "100%",
-    padding: 10,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#ddd",
-  },
-  uploadButton: {
-    backgroundColor: "#ffc107",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  uploadText: {
-    fontWeight: "bold",
-  },
-});
+const createStyles = (isDark: boolean) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: isDark ? "#0a0a0a" : "#ffffff",
+    },
+    container: {
+      padding: 16,
+      backgroundColor: isDark ? "#0a0a0a" : "#ffffff",
+    },
+    infoTitle: {
+      fontSize: 18,
+      fontWeight: "bold",
+      marginBottom: 12,
+      color: isDark ? "#ffffff" : "#111111",
+    },
+    table: {
+      marginRight: 16,
+    },
+    tableHeader: {
+      fontWeight: "bold",
+      fontSize: 16,
+      backgroundColor: isDark ? "#1f2937" : "#e0e0e0",
+      padding: 8,
+      borderWidth: 1,
+      borderColor: isDark ? "#333" : "#ccc",
+      textAlign: "center",
+      color: isDark ? "#fff" : "#111",
+    },
+    tableCell: {
+      padding: 8,
+      fontSize: 14,
+      borderWidth: 1,
+      borderColor: isDark ? "#333" : "#ccc",
+      textAlign: "center",
+      color: isDark ? "#ddd" : "#222",
+      backgroundColor: isDark ? "#0f1720" : "#fff",
+    },
+    sampleButton: {
+      backgroundColor: isDark ? "#2563eb" : "#007bff",
+      padding: 12,
+      borderRadius: 8,
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    sampleText: {
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    button: {
+      backgroundColor: isDark ? "#16a34a" : "#28a745",
+      padding: 12,
+      borderRadius: 8,
+      alignItems: "center",
+      marginBottom: 20,
+    },
+    buttonText: {
+      color: "#fff",
+      fontWeight: "bold",
+    },
+    previewTitle: {
+      fontSize: 16,
+      fontWeight: "bold",
+      marginBottom: 8,
+      color: isDark ? "#fff" : "#111",
+    },
+    studentItem: {
+      backgroundColor: isDark ? "#0b1220" : "#f8f9fa",
+      padding: 10,
+      marginBottom: 5,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: isDark ? "#23303b" : "#ddd",
+    },
+    studentText: {
+      fontSize: 14,
+      color: isDark ? "#e6eef6" : "#111",
+    },
+    bottomBar: {
+      position: "absolute",
+      bottom: 0,
+      paddingBottom: 40,
+      width: "100%",
+      padding: 10,
+      backgroundColor: isDark ? "#071022" : "#fff",
+      borderTopWidth: 1,
+      borderColor: isDark ? "#203243" : "#ddd",
+    },
+    uploadButton: {
+      backgroundColor: isDark ? "#f59e0b" : "#ffc107",
+      padding: 12,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    uploadText: {
+      fontWeight: "bold",
+      color: isDark ? "#0b0b0b" : "#111",
+    },
+  });
